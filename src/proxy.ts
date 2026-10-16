@@ -24,7 +24,7 @@ export function applyEnvProxyToFetch(): void {
     setGlobal();
   } else if (process.env.NODE_USE_ENV_PROXY !== '1') {
     console.error(
-      'Proxy détecté, mais cette version de Node ne sait pas l\'appliquer d\'elle-même.\n' +
+      "Proxy détecté, mais cette version de Node ne sait pas l'appliquer d'elle-même.\n" +
         'Relancez avec NODE_USE_ENV_PROXY=1 (Node ≥ 22.21 ou 24.5), ou passez à Node 24.14+.',
     );
   }

@@ -1,5 +1,6 @@
 #!/usr/bin/env -S node --use-system-ca --disable-warning=ExperimentalWarning
 import { resolve } from 'node:path';
+import tls from 'node:tls';
 import { parseArgs, type ParseArgsConfig } from 'node:util';
 import { config, parseDocId, UserError } from './config.ts';
 import { applyEnvProxyToFetch } from './proxy.ts';
@@ -42,7 +43,9 @@ export function args(argv: string[], options: ParseArgsConfig['options'] = {}, p
   // Un mot en trop vient souvent d'une valeur avec espaces non protégée : on refuse plutôt que de l'ignorer.
   const extra = parsed.positionals.slice(positionals);
   if (extra.length) {
-    throw new UserError(`Argument(s) inattendu(s) : ${extra.join(' ')}\nUne valeur avec des espaces se met entre guillemets : --var nom="Comité de pilotage"`);
+    throw new UserError(
+      `Argument(s) inattendu(s) : ${extra.join(' ')}\nUne valeur avec des espaces se met entre guillemets : --var nom="Comité de pilotage"`,
+    );
   }
   if (parsed.positionals.length < positionals) throw new UserError(`Argument manquant.\n\n${USAGE}`);
   return parsed;
@@ -71,8 +74,9 @@ async function main(argv: string[]): Promise<number> {
     }
     case 'tree': {
       const { values, positionals } = args(rest, { depth: { type: 'string' } });
-      const depth = values.depth === undefined ? Infinity : Number(values.depth);
-      if (!Number.isInteger(depth) && depth !== Infinity) throw new UserError(`--depth attend un entier : ${values.depth}`);
+      const raw = values.depth as string | undefined;
+      const depth = raw === undefined ? Infinity : Number(raw);
+      if (!Number.isInteger(depth) && depth !== Infinity) throw new UserError(`--depth attend un entier : ${raw}`);
       await (await import('./ops.ts')).tree(parseDocId(positionals[0]), depth);
       return 0;
     }
@@ -84,7 +88,11 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
     case 'push': {
-      const { values, positionals } = args(rest, { parent: { type: 'string' }, force: { type: 'boolean' }, ...WRITE_OPTIONS });
+      const { values, positionals } = args(rest, {
+        parent: { type: 'string' },
+        force: { type: 'boolean' },
+        ...WRITE_OPTIONS,
+      });
       const { push } = await import('./push.ts');
       await push(positionals[0], parseDocId(values.parent as string | undefined, 'père (--parent)'), {
         force: Boolean(values.force),
@@ -115,7 +123,9 @@ async function main(argv: string[]): Promise<number> {
     }
     case 'mv': {
       const { values, positionals } = args(rest, { to: { type: 'string' }, ...WRITE_OPTIONS });
-      await (await import('./ops.ts')).mv(parseDocId(positionals[0]), parseDocId(values.to as string | undefined, 'cible (--to)'), writeOpts(values));
+      await (
+        await import('./ops.ts')
+      ).mv(parseDocId(positionals[0]), parseDocId(values.to as string | undefined, 'cible (--to)'), writeOpts(values));
       return 0;
     }
     case 'rename': {
@@ -134,6 +144,17 @@ async function main(argv: string[]): Promise<number> {
   }
 }
 
+/**
+ * Certificats du système (proxy d'entreprise qui inspecte le HTTPS), comme `--use-system-ca` :
+ * le lanceur de `vp add -g` ignore les options du shebang.
+ */
+function useSystemCa(): void {
+  if (process.execArgv.includes('--use-system-ca')) return;
+  const certs = [...tls.getCACertificates('default'), ...tls.getCACertificates('system')];
+  tls.setDefaultCACertificates([...new Set(certs)]);
+}
+
+useSystemCa();
 applyEnvProxyToFetch();
 
 main(process.argv.slice(2)).then(

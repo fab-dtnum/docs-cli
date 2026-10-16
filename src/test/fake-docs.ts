@@ -118,7 +118,9 @@ export async function startFakeDocs(): Promise<FakeServer> {
     });
 
   /** Corps JSON ou multipart (champ `file`, comme l'import de Docs). */
-  async function parseBody(req: http.IncomingMessage): Promise<{ json?: Record<string, unknown>; file?: { name: string; text: string } }> {
+  async function parseBody(
+    req: http.IncomingMessage,
+  ): Promise<{ json?: Record<string, unknown>; file?: { name: string; text: string } }> {
     const raw = await readBody(req);
     const type = req.headers['content-type'] ?? '';
     if (type.startsWith('multipart/form-data')) {
@@ -138,9 +140,13 @@ export async function startFakeDocs(): Promise<FakeServer> {
       res.end(body === undefined ? '' : JSON.stringify(body));
     };
     const cookies = Object.fromEntries(
-      (req.headers.cookie ?? '').split(/;\s*/).filter(Boolean).map((c) => c.split('=') as [string, string]),
+      (req.headers.cookie ?? '')
+        .split(/;\s*/)
+        .filter(Boolean)
+        .map((c) => c.split('=') as [string, string]),
     );
-    if (cookies.docs_sessionid !== SESSION) return send(401, { detail: 'Authentication credentials were not provided.' });
+    if (cookies.docs_sessionid !== SESSION)
+      return send(401, { detail: 'Authentication credentials were not provided.' });
     if (method !== 'GET') {
       const okCsrf = cookies.csrftoken === CSRF && req.headers['x-csrftoken'] === CSRF;
       const okReferer = typeof req.headers.referer === 'string' && req.headers.referer.startsWith(`${state.url}/`);
@@ -154,8 +160,10 @@ export async function startFakeDocs(): Promise<FakeServer> {
     }
     const u = new URL(req.url ?? '/', state.url);
     const p = u.pathname;
-    if (method === 'GET' && p === '/api/v1.0/users/me/') return send(200, { id: 'u1', email: 'test@example.org', full_name: 'Camille Test' });
-    if (method === 'GET' && p === '/api/v1.0/config/') return send(200, { ENVIRONMENT: 'test', CONVERSION_UPLOAD_ENABLED: true });
+    if (method === 'GET' && p === '/api/v1.0/users/me/')
+      return send(200, { id: 'u1', email: 'test@example.org', full_name: 'Camille Test' });
+    if (method === 'GET' && p === '/api/v1.0/config/')
+      return send(200, { ENVIRONMENT: 'test', CONVERSION_UPLOAD_ENABLED: true });
 
     let m: RegExpMatchArray | null;
     if ((m = p.match(/^\/api\/v1.0\/documents\/([^/]+)\/children\/$/))) {
@@ -168,20 +176,21 @@ export async function startFakeDocs(): Promise<FakeServer> {
         const origin = state.nextOrigin ?? state.url;
         return send(200, {
           count: all.length,
-          next: page * size < all.length ? `${origin}/api/v1.0/documents/${parent.id}/children/?page=${page + 1}` : null,
+          next:
+            page * size < all.length ? `${origin}/api/v1.0/documents/${parent.id}/children/?page=${page + 1}` : null,
           results: all.slice((page - 1) * size, page * size).map(meta),
         });
       }
       if (method === 'POST') {
         const { json, file } = await parseBody(req);
-        const title = file ? file.name : String(json?.title ?? '');
+        const title = file ? file.name : typeof json?.title === 'string' ? json.title : '';
         const id = add(parent.id, title, file && !state.childFileIgnored ? file.text : '');
         return send(201, meta(docs.get(id)!));
       }
     }
     if (method === 'POST' && p === '/api/v1.0/documents/') {
       const { json, file } = await parseBody(req);
-      const id = add(null, file ? file.name : String(json?.title ?? ''), file?.text ?? '');
+      const id = add(null, file ? file.name : typeof json?.title === 'string' ? json.title : '', file?.text ?? '');
       return send(201, meta(docs.get(id)!));
     }
     if ((m = p.match(/^\/api\/v1.0\/documents\/([^/]+)\/move\/$/)) && method === 'POST') {

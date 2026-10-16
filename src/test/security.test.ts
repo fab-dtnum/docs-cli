@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { test } from 'vite-plus/test';
 import { apiUrl, mediaUrl } from '../api.ts';
 import { isValidCsrfToken, isValidSessionId, parseBaseUrl, parseDocId, setEnvVar } from '../config.ts';
 import { formatDuration, isImmutableMedia, safeJoin, sanitize } from '../pull.ts';
@@ -17,7 +17,10 @@ test('DOCS_BASE_URL : https obligatoire, http accepté seulement en local', () =
 
 test("le cookie n'est jamais envoyé hors de l'API Docs", () => {
   assert.equal(apiUrl('users/me/', BASE), `${BASE}/api/v1.0/users/me/`);
-  assert.equal(apiUrl(`${BASE}/api/v1.0/documents/x/children/?page=2`, BASE), `${BASE}/api/v1.0/documents/x/children/?page=2`);
+  assert.equal(
+    apiUrl(`${BASE}/api/v1.0/documents/x/children/?page=2`, BASE),
+    `${BASE}/api/v1.0/documents/x/children/?page=2`,
+  );
   assert.throws(() => apiUrl('https://evil.example/api/v1.0/documents/', BASE), /refusée/);
   assert.throws(() => apiUrl('//evil.example/api/v1.0/', BASE), /refusée/);
   assert.throws(() => apiUrl('../../admin/', BASE), /refusée/);

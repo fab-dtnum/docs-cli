@@ -24,7 +24,9 @@ export async function doctor(): Promise<number> {
   await check('.env', () => {
     if (!existsSync(ENV_FILE)) return ['fail', `absent (${ENV_FILE}) : lancez docs login`];
     const mode = statSync(ENV_FILE).mode & 0o777;
-    return mode & 0o077 ? ['warn', `droits ${mode.toString(8)} : chmod 600 ${ENV_FILE}`] : ['ok', `${ENV_FILE}, droits 600`];
+    return mode & 0o077
+      ? ['warn', `droits ${mode.toString(8)} : chmod 600 ${ENV_FILE}`]
+      : ['ok', `${ENV_FILE}, droits 600`];
   });
 
   const session = await check('Session Docs', async () => {

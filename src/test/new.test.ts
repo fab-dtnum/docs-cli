@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { after, before, test } from 'node:test';
+import { afterAll as after, beforeAll as before, test } from 'vite-plus/test';
 import { cli } from './cli.ts';
 import { type FakeServer, startFakeDocs, testEnv } from './fake-docs.ts';
 

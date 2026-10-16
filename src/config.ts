@@ -69,7 +69,9 @@ export const isValidCsrfToken = (v: string) => CSRF_RE.test(v);
 
 export function requireSession(): string {
   if (!config.sessionId) {
-    throw new UserError(`Aucune session : DOCS_SESSIONID est vide (${ENV_FILE}).\nLancez \`docs login\` pour vous connecter via ProConnect.`);
+    throw new UserError(
+      `Aucune session : DOCS_SESSIONID est vide (${ENV_FILE}).\nLancez \`docs login\` pour vous connecter via ProConnect.`,
+    );
   }
   if (!isValidSessionId(config.sessionId)) {
     throw new UserError('DOCS_SESSIONID a un format inattendu. Relancez `docs login`.');

@@ -11,7 +11,16 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, posix, resolve, sep } from 'node:path';
-import { AuthError, type DocMeta, RateLimitError, getDoc, getFormattedMarkdown, getMe, getMedia, listChildren } from './api.ts';
+import {
+  AuthError,
+  type DocMeta,
+  RateLimitError,
+  getDoc,
+  getFormattedMarkdown,
+  getMe,
+  getMedia,
+  listChildren,
+} from './api.ts';
 import { config, docUrl, UserError } from './config.ts';
 import {
   formatDate,
@@ -322,7 +331,8 @@ function writeAttachments(
     const stem = text.toLowerCase().endsWith(safeExt) ? text.slice(0, text.length - safeExt.length) : text;
     const base = sanitize(stem || posix.basename(a.media, ext));
     let file = posix.join(attachmentDir, `${base}${safeExt}`);
-    for (let i = 2; usedFiles.has(file.toLowerCase()); i++) file = posix.join(attachmentDir, `${base} (${i})${safeExt}`);
+    for (let i = 2; usedFiles.has(file.toLowerCase()); i++)
+      file = posix.join(attachmentDir, `${base} (${i})${safeExt}`);
     usedFiles.add(file.toLowerCase());
 
     const path = safeJoin(dir, file);
@@ -399,7 +409,9 @@ function printSummary(nodes: Node[], dir: string, previousName?: string): void {
   const attachments = nodes.flatMap((n) => (n.entry.attachments ?? []).map((a) => ({ ...a, doc: n.entry.file })));
   if (attachments.length) {
     const failed = attachments.filter((a) => a.error);
-    console.log(`${attachments.length} pièce(s) jointe(s) (images, fichiers)${failed.length ? `, dont ${failed.length} en erreur :` : '.'}`);
+    console.log(
+      `${attachments.length} pièce(s) jointe(s) (images, fichiers)${failed.length ? `, dont ${failed.length} en erreur :` : '.'}`,
+    );
     for (const a of failed) console.log(`    - ${a.doc} : ${a.media} — ${a.error}`);
   }
 
@@ -428,6 +440,7 @@ export function sanitize(title: string): string {
   const s = title
     // Caractères invisibles (espace de largeur nulle, marques de direction…) : retirés.
     .replace(/\p{Cf}/gu, '')
+    // oxlint-disable-next-line no-control-regex -- on retire justement les caractères de contrôle
     .replace(/[\x00-\x1f\x7f/\\:*?"<>|#^[\]]/g, ' ')
     .replace(/\s+/g, ' ')
     // Ni point initial (fichier caché, ignoré par rg et Obsidian) ni final.

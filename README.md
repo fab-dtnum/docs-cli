@@ -9,18 +9,22 @@ Comportement détaillé et choix de conception : [SPEC.md](SPEC.md).
 
 ## Installation
 
-Prérequis : Node ≥ 22.18 (24 recommandé, voir `.nvmrc`), [gitleaks](https://github.com/gitleaks/gitleaks) pour contribuer.
+Prérequis : [Vite+](https://viteplus.dev) (`brew install vite-plus`, ou
+`curl -fsSL https://vite.plus | bash`), avec le mode géré activé (`vp env on`) : `vp`
+choisit alors les versions exactes de Node et de pnpm épinglées dans `package.json`.
+[gitleaks](https://github.com/gitleaks/gitleaks) pour contribuer.
 
 ```bash
-corepack enable
-pnpm install
-pnpm exec playwright install firefox
-pnpm link --global
+vp install                          # dépendances (pnpm, version épinglée)
+vp exec playwright install firefox  # navigateur de `docs login`
+vp add -g "$PWD"                    # → commande `docs` (lien vers ce clone)
 docs login
 docs doctor
 ```
 
-`docs` exécute directement `src/cli.ts` de ce clone : un `git pull` suffit pour mettre à jour.
+`docs` est un lien vers `src/cli.ts` de ce clone, exécuté par le Node épinglé : un `git pull`
+suffit pour mettre à jour. Le dossier des binaires de Vite+ (`~/.local/share/vite-plus/bin`)
+doit être dans le `PATH` (`vp env setup`). Désinstallation : `vp remove -g docs-cli`.
 Session, profil du navigateur et état des push vont dans `~/.config/docs-cli/`
 (`DOCS_HOME` pour en changer), pas dans le dossier courant.
 
@@ -66,7 +70,7 @@ Voir [.env.example](.env.example). `DOCS_SESSIONID` et `DOCS_CSRFTOKEN` sont rem
 **Proxy d'entreprise** : `HTTPS_PROXY` / `NO_PROXY` dans le shell ou le `.env` (Node ≥ 24.14,
 sinon `NODE_USE_ENV_PROXY=1`).
 
-**Certificat HTTPS non reconnu** : le binaire lance Node avec `--use-system-ca` ; installez le
+**Certificat HTTPS non reconnu** : le binaire charge les certificats du système (comme `--use-system-ca`) ; installez le
 certificat racine de l'organisation, ou `NODE_EXTRA_CA_CERTS=/chemin/ca.pem`. Ne désactivez
 jamais la vérification.
 
@@ -80,7 +84,9 @@ jamais la vérification.
 ## Développement
 
 ```bash
-pnpm typecheck && pnpm test
+vp check   # format, lint, types
+vp test
+vp run ready   # les deux, avant de livrer
 ```
 
 Les tests tournent contre une fausse API Docs en mémoire (`src/test/fake-docs.ts`).

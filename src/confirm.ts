@@ -19,7 +19,9 @@ export async function confirmPlan(lines: string[], opts: WriteOptions): Promise<
   }
   if (opts.yes) return true;
   if (!process.stdin.isTTY) {
-    throw new UserError('Confirmation impossible sans terminal : relancez avec --yes (ou --dry-run pour voir le plan).');
+    throw new UserError(
+      'Confirmation impossible sans terminal : relancez avec --yes (ou --dry-run pour voir le plan).',
+    );
   }
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   try {

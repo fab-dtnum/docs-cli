@@ -24,6 +24,4 @@ keywords = ["csrftoken"]
 
 [allowlist]
 description = "Fichiers sans secret réel"
-paths = [
-  '''(^|/)pnpm-lock\.yaml$''',
-]
+paths = ['''(^|/)pnpm-lock\.yaml$''']

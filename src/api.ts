@@ -113,8 +113,8 @@ export function networkErrorMessage(service: string, url: string, code: string):
   if (CERT_ERRORS.test(code)) {
     lines.push(
       'Certificat HTTPS non reconnu : le proxy inspecte probablement le trafic HTTPS.',
-      "Node utilise déjà les certificats du système (--use-system-ca) : demandez le certificat racine de",
-      "votre organisation et installez-le sur le poste, ou pointez NODE_EXTRA_CA_CERTS vers ce fichier .pem.",
+      'Node utilise déjà les certificats du système (--use-system-ca) : demandez le certificat racine de',
+      'votre organisation et installez-le sur le poste, ou pointez NODE_EXTRA_CA_CERTS vers ce fichier .pem.',
       'Ne désactivez pas la vérification des certificats : vos jetons seraient exposés.',
     );
   } else if (/ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET/.test(code)) {
@@ -206,7 +206,9 @@ async function send(url: string, path: string, opts: SendOptions = {}): Promise<
       const detail = await errorDetail(res);
       if (write && /CSRF/i.test(detail)) throw new CsrfError();
       if (!write) throw new AuthError();
-      throw new UserError(`Docs refuse l'écriture (HTTP 403 sur ${path}) : droits insuffisants sur ce document. ${detail}`);
+      throw new UserError(
+        `Docs refuse l'écriture (HTTP 403 sur ${path}) : droits insuffisants sur ce document. ${detail}`,
+      );
     }
     if (res.status === 429) {
       const retryAfter = retryAfterSeconds(res);
@@ -238,7 +240,11 @@ async function request<T>(path: string, sessionId?: string): Promise<T> {
  * Écriture brute. N'appeler que depuis `writer.ts`, qui vérifie la garde d'écriture
  * (plan affiché et confirmé) avant toute requête.
  */
-export async function rawWrite<T = unknown>(method: Exclude<Method, 'GET'>, path: string, body?: FormData | object): Promise<T | null> {
+export async function rawWrite<T = unknown>(
+  method: Exclude<Method, 'GET'>,
+  path: string,
+  body?: FormData | object,
+): Promise<T | null> {
   const res = await send(apiUrl(path), path, { method, body });
   if (res.status === 204) return null;
   const text = await res.text();
@@ -259,7 +265,10 @@ export const isDocMeta = (d: DocMeta) =>
   typeof d.path === 'string';
 
 export async function getMe(sessionId?: string) {
-  const me = await request<{ id?: string; email: string; full_name?: string; short_name?: string }>('users/me/', sessionId);
+  const me = await request<{ id?: string; email: string; full_name?: string; short_name?: string }>(
+    'users/me/',
+    sessionId,
+  );
   return expect(typeof me?.email === 'string', me, 'utilisateur');
 }
 

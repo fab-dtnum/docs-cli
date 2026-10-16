@@ -47,9 +47,14 @@ async function countDescendants(doc: DocMeta): Promise<number> {
 export async function mv(id: string, targetId: string, opts: WriteOptions): Promise<void> {
   const [doc, target] = await Promise.all([getDoc(id), getDoc(targetId)]);
   if (isSameOrDescendant(target, doc)) {
-    throw new UserError(`Refus : ${label(target)} est ${doc.id === target.id ? 'le document lui-même' : 'un descendant du document à déplacer'}.`);
+    throw new UserError(
+      `Refus : ${label(target)} est ${doc.id === target.id ? 'le document lui-même' : 'un descendant du document à déplacer'}.`,
+    );
   }
-  const plan = [`Déplacer ${label(doc)} (${docUrl(doc.id)})`, `  sous ${label(target)} (${docUrl(target.id)}), en dernier enfant`];
+  const plan = [
+    `Déplacer ${label(doc)} (${docUrl(doc.id)})`,
+    `  sous ${label(target)} (${docUrl(target.id)}), en dernier enfant`,
+  ];
   if (doc.numchild) plan.push(`  avec ses sous-documents`);
   if (!(await confirmPlan(plan, opts))) return;
   await new Writer().move(id, targetId);
@@ -67,7 +72,10 @@ export async function rename(id: string, title: string, opts: WriteOptions): Pro
 export async function rm(id: string, opts: WriteOptions): Promise<void> {
   const doc = await getDoc(id);
   const n = await countDescendants(doc);
-  const plan = [`Mettre à la corbeille ${label(doc)} (${docUrl(id)})${n ? `, avec ${n} sous-document(s)` : ''}`, '  (restaurable 30 jours depuis la corbeille de Docs)'];
+  const plan = [
+    `Mettre à la corbeille ${label(doc)} (${docUrl(id)})${n ? `, avec ${n} sous-document(s)` : ''}`,
+    '  (restaurable 30 jours depuis la corbeille de Docs)',
+  ];
   if (!(await confirmPlan(plan, opts))) return;
   await new Writer().delete(id);
   console.log(`Mis à la corbeille : ${label(doc)}`);

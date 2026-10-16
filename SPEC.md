@@ -15,24 +15,30 @@ Binaire `docs`, installé depuis un clone :
 
 ```bash
 git clone … docs-cli && cd docs-cli
-corepack enable && pnpm install
-pnpm exec playwright install firefox
-pnpm link --global          # → commande `docs` disponible partout
+vp install                          # Vite+ : Node et pnpm aux versions épinglées
+vp exec playwright install firefox
+vp add -g "$PWD"                    # → commande `docs` (lien vers ce clone)
 ```
 
+Outillage : [Vite+](https://viteplus.dev) (`vp`) gère Node (`devEngines.runtime`) et pnpm
+(`packageManager`) ; on n'appelle jamais pnpm directement. `vp check` (format, lint,
+types) et `vp test` avant de livrer.
+
 Le TypeScript est exécuté directement par Node (≥ 22.18, sans compilation). Le binaire
-pointe vers `src/cli.ts` du clone (et non vers `node_modules`, où Node refuse le TypeScript).
+pointe vers `src/cli.ts` du clone (et non vers une copie dans `node_modules`, où Node refuse
+le TypeScript). Le lanceur de `vp` ignore les options du shebang : `cli.ts` ajoute lui-même
+les certificats du système (équivalent de `--use-system-ca`).
 
 ### Fichiers de l'utilisateur
 
 Le binaire est lancé depuis n'importe quel dossier : la configuration et l'état ne
 dépendent pas du dossier courant.
 
-| Chemin | Contenu | Droits |
-| --- | --- | --- |
-| `$DOCS_HOME/.env` | session, jeton CSRF, réglages | 600 |
-| `$DOCS_HOME/.auth/` | profil du navigateur de `docs login` | 700 |
-| `$DOCS_HOME/state/push.json` | état des push (§4.3) | 600 |
+| Chemin                       | Contenu                              | Droits |
+| ---------------------------- | ------------------------------------ | ------ |
+| `$DOCS_HOME/.env`            | session, jeton CSRF, réglages        | 600    |
+| `$DOCS_HOME/.auth/`          | profil du navigateur de `docs login` | 700    |
+| `$DOCS_HOME/state/push.json` | état des push (§4.3)                 | 600    |
 
 `DOCS_HOME` vaut par défaut `$XDG_CONFIG_HOME/docs-cli`, sinon `~/.config/docs-cli`.
 Les variables d'environnement du shell priment sur celles du `.env`.
@@ -221,16 +227,16 @@ racine puis déplacement, pour une instance où le fichier joint à `children/` 
 
 ## 5. Variables d'environnement (`$DOCS_HOME/.env`)
 
-| Variable | Défaut | Rôle |
-| --- | --- | --- |
-| `DOCS_SESSIONID`, `DOCS_CSRFTOKEN` | — | écrits par `docs login` |
-| `DOCS_BASE_URL` | `https://docs.numerique.gouv.fr` | instance |
-| `DOCS_TEMPLATES` | — | id du document qui contient les modèles (`new`) |
-| `DOCS_CREATE_MODE` | `children` | `children` ou `move` (§4.2) |
-| `DOCS_RATE_PER_MINUTE` | `60` | débit maximal |
-| `DOCS_CONCURRENCY` | `4` | lectures en parallèle (`pull`) |
-| `DOCS_BROWSER` | `firefox` | navigateur de `docs login` |
-| `HTTPS_PROXY`, `NO_PROXY` | — | proxy d'entreprise |
+| Variable                           | Défaut                           | Rôle                                            |
+| ---------------------------------- | -------------------------------- | ----------------------------------------------- |
+| `DOCS_SESSIONID`, `DOCS_CSRFTOKEN` | —                                | écrits par `docs login`                         |
+| `DOCS_BASE_URL`                    | `https://docs.numerique.gouv.fr` | instance                                        |
+| `DOCS_TEMPLATES`                   | —                                | id du document qui contient les modèles (`new`) |
+| `DOCS_CREATE_MODE`                 | `children`                       | `children` ou `move` (§4.2)                     |
+| `DOCS_RATE_PER_MINUTE`             | `60`                             | débit maximal                                   |
+| `DOCS_CONCURRENCY`                 | `4`                              | lectures en parallèle (`pull`)                  |
+| `DOCS_BROWSER`                     | `firefox`                        | navigateur de `docs login`                      |
+| `HTTPS_PROXY`, `NO_PROXY`          | —                                | proxy d'entreprise                              |
 
 ## 6. Tests
 

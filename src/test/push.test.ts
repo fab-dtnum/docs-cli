@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { after, before, test } from 'node:test';
+import { afterAll as after, beforeAll as before, test } from 'vite-plus/test';
 import { cli } from './cli.ts';
 import { type FakeServer, startFakeDocs, testEnv } from './fake-docs.ts';
 
@@ -82,7 +82,11 @@ test('push modifié : tout archivé sous Archive > date, id du père inchangé',
   const [first] = server.childrenOf(archive.id);
   assert.match(first.title, /^\d{4}-\d{2}-\d{2} \d{2}h\d{2}$/);
   assert.deepEqual(titles(first.id), ['Manuel']);
-  assert.deepEqual(titles(server.findChild(first.id, 'Manuel')!.id), ['Petit'], 'descendants déplacés avec leur parent');
+  assert.deepEqual(
+    titles(server.findChild(first.id, 'Manuel')!.id),
+    ['Petit'],
+    'descendants déplacés avec leur parent',
+  );
 
   writeFileSync(join(dir, 'x.md'), 'v2');
   writeFileSync(join(dir, 'y.md'), 'nouveau');

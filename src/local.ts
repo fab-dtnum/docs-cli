@@ -103,7 +103,9 @@ export function readLocal(path: string): LocalSource {
 /** Empreinte de ce qui serait envoyé : chemin, titre et contenu de chaque document. */
 export function hashLocal(source: LocalSource): string {
   const strip = (d: LocalDoc): unknown => [d.rel, d.title, d.markdown, d.children.map(strip)];
-  return createHash('sha256').update(JSON.stringify([source.kind, source.docs.map(strip)])).digest('hex');
+  return createHash('sha256')
+    .update(JSON.stringify([source.kind, source.docs.map(strip)]))
+    .digest('hex');
 }
 
 export const countDocs = (docs: LocalDoc[]): number => docs.reduce((n, d) => n + 1 + countDocs(d.children), 0);

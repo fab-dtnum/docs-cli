@@ -14,6 +14,7 @@ export interface CreateRequest {
 export function uploadName(title: string): string {
   const base = title
     .replace(/\p{Cf}/gu, '')
+    // oxlint-disable-next-line no-control-regex -- on retire justement les caractères de contrôle
     .replace(/[\x00-\x1f\x7f/\\:*?"<>|]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -23,14 +24,23 @@ export function uploadName(title: string): string {
 
 /** Titre envoyé à Docs : une ligne, sans caractère de contrôle ni invisible. */
 export function cleanTitle(title: string): string {
-  const t = title.replace(/\p{Cf}/gu, '').replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim();
+  const t = title
+    .replace(/\p{Cf}/gu, '')
+    // oxlint-disable-next-line no-control-regex -- on retire justement les caractères de contrôle
+    .replace(/[\x00-\x1f\x7f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!t) throw new UserError('Titre vide.');
   return t.slice(0, 255);
 }
 
 /** Clé de comparaison de deux titres : sans casse ni espaces superflus. */
 export const titleKey = (title: string | null | undefined) =>
-  (title ?? '').replace(/\p{Cf}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  (title ?? '')
+    .replace(/\p{Cf}/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
 
 export class Writer {
   private readonly mode: CreateMode;

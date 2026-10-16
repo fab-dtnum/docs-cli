@@ -37,7 +37,7 @@ function renderBlockGroup(group: Y.XmlElement, indent: string, out: string[]): v
     number = content?.nodeName === 'numberedListItem' ? number + 1 : 0;
     if (content) {
       const block = renderBlock(content, number);
-      const isListItem = /ListItem$/.test(content.nodeName);
+      const isListItem = content.nodeName.endsWith('ListItem');
       // Deux listes de types différents doivent être séparées, sinon elles fusionnent.
       if (isListItem && previousList && previousList !== content.nodeName) out.push('');
       previousList = isListItem ? content.nodeName : undefined;
@@ -51,6 +51,11 @@ function renderBlockGroup(group: Y.XmlElement, indent: string, out: string[]): v
 
 function renderBlock(el: Y.XmlElement, number: number): string {
   const attr = (k: string) => el.getAttribute(k) as unknown;
+  /** Attribut texte (ou nombre) ; vide pour tout autre type, plutôt que « [object Object] ». */
+  const attrText = (k: string) => {
+    const v = attr(k);
+    return typeof v === 'string' || typeof v === 'number' ? String(v) : '';
+  };
   const text = () => inline(el);
   switch (el.nodeName) {
     case 'heading':
@@ -71,21 +76,21 @@ function renderBlock(el: Y.XmlElement, number: number): string {
         .map((l) => `> ${l}`)
         .join('\n');
     case 'codeBlock':
-      return '```' + String(attr('language') ?? '') + '\n' + textOf(el) + '\n```';
+      return '```' + attrText('language') + '\n' + textOf(el) + '\n```';
     case 'divider':
       return '---';
     case 'table':
       return renderTable(el);
     case 'image': {
-      const url = String(attr('url') ?? '');
-      return url ? `![${String(attr('caption') ?? attr('name') ?? '')}](${url})` : '';
+      const url = attrText('url');
+      return url ? `![${attrText('caption') || attrText('name')}](${url})` : '';
     }
     case 'file':
     case 'pdf':
     case 'video':
     case 'audio': {
-      const url = String(attr('url') ?? '');
-      return url ? `[${String(attr('name') ?? attr('caption') ?? el.nodeName)}](${url})` : '';
+      const url = attrText('url');
+      return url ? `[${attrText('name') || attrText('caption') || el.nodeName}](${url})` : '';
     }
     default:
       // Type inconnu : on garde au moins le texte pour la recherche.
@@ -105,8 +110,7 @@ function renderTable(table: Y.XmlElement): string {
     );
   if (!rows.length) return '';
   const width = Math.max(...rows.map((r) => r.length));
-  const line = (cells: string[]) =>
-    `| ${Array.from({ length: width }, (_, i) => cells[i] ?? '').join(' | ')} |`;
+  const line = (cells: string[]) => `| ${Array.from({ length: width }, (_, i) => cells[i] ?? '').join(' | ')} |`;
   return [line(rows[0]), line(Array(width).fill('---')), ...rows.slice(1).map(line)].join('\n');
 }
 
@@ -163,9 +167,7 @@ function textOf(el: Y.XmlElement): string {
   return (el.toArray() as Node[])
     .map((c) => {
       if (c instanceof Y.XmlText) {
-        return (c.toDelta() as DeltaOp[])
-          .map((op) => (typeof op.insert === 'string' ? op.insert : ''))
-          .join('');
+        return (c.toDelta() as DeltaOp[]).map((op) => (typeof op.insert === 'string' ? op.insert : '')).join('');
       }
       return c instanceof Y.XmlElement ? textOf(c) : '';
     })

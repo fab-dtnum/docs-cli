@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { after, before, test } from 'node:test';
+import { afterAll as after, beforeAll as before, test } from 'vite-plus/test';
 import { cli } from './cli.ts';
 import { type FakeServer, startFakeDocs, testEnv } from './fake-docs.ts';
 
@@ -17,7 +17,10 @@ before(async () => {
 after(() => server.close());
 
 test('ls et tree', async () => {
-  const root = server.seed({ title: 'Racine', children: [{ title: 'A', children: [{ title: 'A1' }] }, { title: 'B' }] });
+  const root = server.seed({
+    title: 'Racine',
+    children: [{ title: 'A', children: [{ title: 'A1' }] }, { title: 'B' }],
+  });
   const ls = await cli(['ls', `${server.url}/docs/${root}/`]);
   assert.equal(ls.status, 0, ls.stderr);
   assert.match(ls.stdout, /A, 1 enfant\(s\)/);
@@ -39,7 +42,10 @@ test('mv, rename, rm ; déplacement sous un descendant refusé', async () => {
   assert.match(loop.stderr, /descendant/);
 
   assert.equal((await cli(['mv', b, '--to', a, '--yes'])).status, 0);
-  assert.deepEqual(server.childrenOf(a).map((d) => d.title), ['A1', 'B']);
+  assert.deepEqual(
+    server.childrenOf(a).map((d) => d.title),
+    ['A1', 'B'],
+  );
 
   assert.equal((await cli(['rename', b, 'Bis', '--yes'])).status, 0);
   assert.equal(server.docs.get(b)!.title, 'Bis');
@@ -61,5 +67,8 @@ test('pull : instantané, puis delta sans retéléchargement', async () => {
   const second = await cli(['pull', root, '--out', out]);
   assert.equal(second.status, 0, second.stderr);
   assert.match(second.stdout, /2 inchangé\(s\)/);
-  assert.deepEqual(server.requests.filter((r) => r.includes('formatted-content')), []);
+  assert.deepEqual(
+    server.requests.filter((r) => r.includes('formatted-content')),
+    [],
+  );
 });

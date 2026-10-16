@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { test } from 'vite-plus/test';
 import { parseMarkdown } from '../local.ts';
 import { archiveStamp, parseDay, uniqueTitle } from '../push.ts';
 
@@ -8,11 +8,20 @@ test('titre : front matter, sinon # initial, sinon nom du fichier', () => {
     title: 'Mon titre',
     markdown: '# Autre\n\nCorps',
   });
-  assert.deepEqual(parseMarkdown('---\nid: x\n---\n# Titre H1\n\nCorps', 'f'), { title: 'Titre H1', markdown: 'Corps' });
+  assert.deepEqual(parseMarkdown('---\nid: x\n---\n# Titre H1\n\nCorps', 'f'), {
+    title: 'Titre H1',
+    markdown: 'Corps',
+  });
   assert.deepEqual(parseMarkdown('﻿\n# Titre #\nCorps', 'f'), { title: 'Titre', markdown: 'Corps' });
-  assert.deepEqual(parseMarkdown('Intro\n\n# Plus loin', 'fichier'), { title: 'fichier', markdown: 'Intro\n\n# Plus loin' });
+  assert.deepEqual(parseMarkdown('Intro\n\n# Plus loin', 'fichier'), {
+    title: 'fichier',
+    markdown: 'Intro\n\n# Plus loin',
+  });
   // Une règle horizontale en tête n'est pas un front matter.
-  assert.deepEqual(parseMarkdown('---\n- liste\n---\nSuite', 'f'), { title: 'f', markdown: '---\n- liste\n---\nSuite' });
+  assert.deepEqual(parseMarkdown('---\n- liste\n---\nSuite', 'f'), {
+    title: 'f',
+    markdown: '---\n- liste\n---\nSuite',
+  });
 });
 
 test('archives datées : format, unicité, date de prune', () => {

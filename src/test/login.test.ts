@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { test } from 'vite-plus/test';
 import { parseBrowser } from '../login.ts';
 
 test('navigateur : --browser, sinon DOCS_BROWSER, sinon Firefox', () => {

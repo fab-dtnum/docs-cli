@@ -17,3 +17,7 @@ allowBuilds: {}
 
 # Versions exactes dans package.json (pas de ^) : une mise à jour est toujours explicite.
 savePrefix: ''
+
+# Vite+ fournit son propre cœur de Vite : toute dépendance qui demande `vite` reçoit celui-là.
+overrides:
+  vite: 'npm:@voidzero-dev/vite-plus-core@1.1.0'

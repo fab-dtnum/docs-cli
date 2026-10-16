@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { afterEach, test } from 'node:test';
+import { afterEach, test, vi } from 'vite-plus/test';
 import { playwrightProxy } from '../proxy.ts';
 
 const KEYS = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'NO_PROXY', 'no_proxy'];
@@ -30,10 +30,10 @@ test('HTTPS_PROXY avec identifiants et NO_PROXY : transmis à Chromium', () => {
   });
 });
 
-test('HTTPS_PROXY prioritaire sur HTTP_PROXY ; valeur invalide ignorée', (t) => {
+test('HTTPS_PROXY prioritaire sur HTTP_PROXY ; valeur invalide ignorée', () => {
   setEnv({ HTTPS_PROXY: 'http://a:1', HTTP_PROXY: 'http://b:2' });
   assert.equal(playwrightProxy()?.server, 'http://a:1');
-  t.mock.method(console, 'error', () => {});
+  vi.spyOn(console, 'error').mockImplementation(() => {});
   setEnv({ HTTPS_PROXY: 'pas une url' });
   assert.equal(playwrightProxy(), undefined);
 });

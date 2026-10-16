@@ -44,7 +44,9 @@ export async function push(path: string, parentId: string, opts: PushOptions = {
   const hash = hashLocal(source);
   const previous = getTarget(key);
   if (previous?.hash === hash && !opts.force) {
-    console.log(`Rien à pousser : identique au push du ${formatDate(new Date(previous.pushedAt))} sous ${docUrl(parentId)}.`);
+    console.log(
+      `Rien à pousser : identique au push du ${formatDate(new Date(previous.pushedAt))} sous ${docUrl(parentId)}.`,
+    );
     console.log('(--force pour pousser quand même)');
     return;
   }
@@ -62,7 +64,8 @@ export async function push(path: string, parentId: string, opts: PushOptions = {
   const plan = [`Père : ${label(parent)} — ${docUrl(parentId)}`];
   if (toArchive.length) {
     plan.push(`\nÀ archiver sous ${ARCHIVE_TITLE}${archive ? '' : ' (créé)'} > ${stamp} :`);
-    for (const c of toArchive) plan.push(`  - ${label(c)}${c.numchild ? ` (+ ${c.numchild} enfant(s) direct(s))` : ''}`);
+    for (const c of toArchive)
+      plan.push(`  - ${label(c)}${c.numchild ? ` (+ ${c.numchild} enfant(s) direct(s))` : ''}`);
   } else {
     plan.push('\nRien à archiver.');
   }

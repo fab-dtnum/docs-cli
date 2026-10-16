@@ -44,7 +44,9 @@ export function parseVars(list: string[] = []): Record<string, string> {
 
 export async function findTemplate(name: string): Promise<DocMeta> {
   if (!config.templatesId) {
-    throw new UserError('DOCS_TEMPLATES n’est pas défini : indiquez dans .env l’id du document qui contient les modèles.');
+    throw new UserError(
+      'DOCS_TEMPLATES n’est pas défini : indiquez dans .env l’id du document qui contient les modèles.',
+    );
   }
   const templatesId = parseDocId(config.templatesId, 'DOCS_TEMPLATES');
   const children = await listChildren(templatesId);
