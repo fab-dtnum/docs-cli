@@ -34,7 +34,7 @@ test('new : variables (échappées comprises), titre tiré du modèle, anti-doub
 
   const again = await cli(['new', 'cr', '--parent', target, '--var', 'sujet=Copil', '--var', 'nom_court=cp', '--yes']);
   assert.equal(again.status, 1);
-  assert.match(again.stderr, /existe déjà/);
+  assert.match(again.stderr, /« CR Copil du [\d-]+ » existe déjà sous « Cible » \([0-9a-f-]{36}\)\n/);
 });
 
 test('new : variable manquante, modèle sans titre, modèle inconnu', async () => {
@@ -46,5 +46,5 @@ test('new : variable manquante, modèle sans titre, modèle inconnu', async () =
   assert.equal(ok.status, 0, ok.stderr);
   assert.ok(server.findChild(target, 'Libre 1'));
   const unknown = await cli(['new', 'inconnu', '--parent', target, '--yes']);
-  assert.match(unknown.stderr, /Modèles présents : cr, libre/);
+  assert.match(unknown.stderr, /introuvable sous « Modèles » \([0-9a-f-]{36}\)\.\nModèles présents : cr, libre/);
 });

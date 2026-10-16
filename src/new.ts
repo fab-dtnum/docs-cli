@@ -1,10 +1,9 @@
 // `docs new <modèle>` : modèle = enfant du document DOCS_TEMPLATES ; variables `{{nom}}`.
 // L'export Markdown de Docs peut échapper `_`, `{` ou `}` (`{{lien\_jalon}}`) : la lecture tolère ces échappements.
-import { type DocMeta, getFormattedMarkdown, getMe, listChildren } from './api.ts';
-import { config, docUrl, parseDocId, UserError } from './config.ts';
+import { type DocMeta, getDoc, getFormattedMarkdown, getMe, listChildren } from './api.ts';
+import { config, docLink, parseDocId, UserError } from './config.ts';
 import { confirmPlan, type WriteOptions } from './confirm.ts';
 import { parseMarkdown } from './local.ts';
-import { label } from './ops.ts';
 import { archiveStamp } from './push.ts';
 import { cleanTitle, titleKey, Writer } from './writer.ts';
 
@@ -53,7 +52,7 @@ export async function findTemplate(name: string): Promise<DocMeta> {
   const doc = children.find((c) => titleKey(c.title) === titleKey(name));
   if (!doc) {
     throw new UserError(
-      `Modèle « ${name} » introuvable sous ${docUrl(templatesId)}.\n` +
+      `Modèle « ${name} » introuvable sous ${docLink(await getDoc(templatesId))}.\n` +
         `Modèles présents : ${children.map((c) => c.title).join(', ') || '(aucun)'}`,
     );
   }
@@ -67,6 +66,7 @@ export interface NewOptions extends WriteOptions {
 }
 
 export async function newDoc(name: string, parentId: string, opts: NewOptions = {}): Promise<DocMeta | undefined> {
+  const parent = await getDoc(parentId);
   const body = await getFormattedMarkdown((await findTemplate(name)).id);
   const now = opts.now ?? new Date();
   const stamp = archiveStamp(now);
@@ -89,12 +89,12 @@ export async function newDoc(name: string, parentId: string, opts: NewOptions = 
   }
 
   const duplicate = (await listChildren(parentId)).find((c) => titleKey(c.title) === titleKey(title));
-  if (duplicate) throw new UserError(`Refus : « ${title} » existe déjà sous ce parent : ${docUrl(duplicate.id)}`);
+  if (duplicate) throw new UserError(`Refus : « ${title} » existe déjà sous ${docLink(parent)}`);
 
-  const plan = [`Créer « ${title} » sous ${docUrl(parentId)}`];
+  const plan = [`Créer « ${title} » sous ${docLink(parent)}`];
   if (opts.dryRun) plan.push('--- Markdown ---', markdown, '--- fin ---');
   if (!(await confirmPlan(plan, opts))) return undefined;
   const doc = await new Writer().create({ parentId, title, markdown });
-  console.log(`Créé : ${label(doc)} → ${docUrl(doc.id)}`);
+  console.log(`Créé : ${docLink(doc)}`);
   return doc;
 }

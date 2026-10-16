@@ -76,3 +76,21 @@ test('durée lisible', () => {
   assert.equal(formatDuration(42_400), '42 s');
   assert.equal(formatDuration(185_000), '3 min 05 s');
 });
+
+test('liens cliquables : OSC 8 seulement si demandé ou vers un terminal', async () => {
+  const { docLink } = await import('../config.ts');
+  const doc = { id: 'e9ebe2ad-e54b-498f-971a-05845f1a662c', title: ' racine ' };
+  const saved = process.env.DOCS_HYPERLINKS;
+  try {
+    process.env.DOCS_HYPERLINKS = '0';
+    assert.equal(docLink(doc), `« racine » (${doc.id})`);
+    process.env.DOCS_HYPERLINKS = '1';
+    assert.equal(
+      docLink(doc),
+      `« racine » (\x1b]8;;https://docs.numerique.gouv.fr/docs/${doc.id}/\x1b\\${doc.id}\x1b]8;;\x1b\\)`,
+    );
+  } finally {
+    if (saved === undefined) delete process.env.DOCS_HYPERLINKS;
+    else process.env.DOCS_HYPERLINKS = saved;
+  }
+});

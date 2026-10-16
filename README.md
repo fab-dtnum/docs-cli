@@ -28,6 +28,21 @@ doit être dans le `PATH` (`vp env setup`). Désinstallation : `vp remove -g doc
 Session, profil du navigateur et état des push vont dans `~/.config/docs-cli/`
 (`DOCS_HOME` pour en changer), pas dans le dossier courant.
 
+### Pourquoi Playwright ?
+
+Uniquement pour `docs login` ; toutes les autres commandes appellent l'API de Docs
+directement depuis Node.
+
+- Docs se connecte via ProConnect (redirections, double authentification éventuelle,
+  formulaire du fournisseur d'identité) : pas de connexion par mot de passe depuis un script.
+- `docs login` ouvre donc une vraie fenêtre de navigateur, vous vous connectez vous-même
+  (le script ne voit pas vos identifiants), puis il récupère les cookies `docs_sessionid`
+  et `csrftoken` et les écrit dans `~/.config/docs-cli/.env`.
+- Le profil du navigateur est conservé (`~/.config/docs-cli/.auth/`) : quand la session
+  (12 h) expire, la reconnexion est souvent immédiate.
+- Sans Playwright : connectez-vous à Docs dans votre navigateur habituel, puis recopiez les
+  deux cookies dans le `.env` (voir [Dépannage](#dépannage)).
+
 ## Utilisation
 
 ```bash

@@ -2,7 +2,7 @@
 // puis recrée l'arbre local sous le père, dont l'id ne change jamais (SPEC.md §3, push).
 import { resolve } from 'node:path';
 import { type DocMeta, getDoc, listChildren } from './api.ts';
-import { docUrl, UserError } from './config.ts';
+import { docLink, UserError } from './config.ts';
 import { confirmPlan, type WriteOptions } from './confirm.ts';
 import { countDocs, hashLocal, type LocalDoc, readLocal } from './local.ts';
 import { label } from './ops.ts';
@@ -45,7 +45,7 @@ export async function push(path: string, parentId: string, opts: PushOptions = {
   const previous = getTarget(key);
   if (previous?.hash === hash && !opts.force) {
     console.log(
-      `Rien à pousser : identique au push du ${formatDate(new Date(previous.pushedAt))} sous ${docUrl(parentId)}.`,
+      `Rien à pousser : identique au push du ${formatDate(new Date(previous.pushedAt))} sous ${docLink({ id: parentId, title: previous.parentTitle })}.`,
     );
     console.log('(--force pour pousser quand même)');
     return;
@@ -61,11 +61,11 @@ export async function push(path: string, parentId: string, opts: PushOptions = {
   const existingStamps = archive && toArchive.length ? (await listChildren(archive.id)).map((c) => c.title) : [];
   const stamp = uniqueTitle(archiveStamp(now), existingStamps);
 
-  const plan = [`Père : ${label(parent)} — ${docUrl(parentId)}`];
+  const plan = [`Père : ${docLink(parent)}`];
   if (toArchive.length) {
     plan.push(`\nÀ archiver sous ${ARCHIVE_TITLE}${archive ? '' : ' (créé)'} > ${stamp} :`);
     for (const c of toArchive)
-      plan.push(`  - ${label(c)}${c.numchild ? ` (+ ${c.numchild} enfant(s) direct(s))` : ''}`);
+      plan.push(`  - ${docLink(c)}${c.numchild ? ` (+ ${c.numchild} enfant(s) direct(s))` : ''}`);
   } else {
     plan.push('\nRien à archiver.');
   }
@@ -93,14 +93,14 @@ export async function push(path: string, parentId: string, opts: PushOptions = {
           markdown: `# ${ARCHIVE_TITLE}\n\nVersions précédentes des sous-documents, archivées par \`docs push\` avant chaque mise à jour.\n`,
         });
         archiveId = created.id;
-        done.push(`créé ${label(created)} — ${docUrl(created.id)}`);
+        done.push(`créé ${docLink(created)}`);
       }
       archived = await writer.create({
         parentId: archiveId,
         title: stamp,
         markdown: `Sous-documents de ${label(parent)} remplacés par \`docs push\` le ${formatDate(now)}.\n`,
       });
-      done.push(`créé ${label(archived)} — ${docUrl(archived.id)}`);
+      done.push(`créé ${docLink(archived)}`);
       for (const c of toArchive) {
         await writer.move(c.id, archived.id);
         done.push(`archivé ${label(c)}`);
@@ -110,8 +110,8 @@ export async function push(path: string, parentId: string, opts: PushOptions = {
       for (const d of docs) {
         const created = await writer.create({ parentId: under, title: d.title, markdown: d.markdown });
         documents[d.rel] = created.id;
-        done.push(`créé ${label(created)} — ${docUrl(created.id)}`);
-        console.log(`Créé : ${label(created)} → ${docUrl(created.id)}`);
+        done.push(`créé ${docLink(created)}`);
+        console.log(`Créé : ${docLink(created)}`);
         await create(d.children, created.id);
       }
     };
@@ -124,14 +124,15 @@ export async function push(path: string, parentId: string, opts: PushOptions = {
 
   saveTarget(key, {
     hash,
+    parentTitle: parent.title ?? undefined,
     pushedAt: now.toISOString(),
     source: resolve(path),
     ...(archived && { archive: archived.id }),
     documents,
   });
   console.log(
-    `\n${countDocs(source.docs)} document(s) créé(s) sous ${label(parent)}` +
-      (archived ? `, ${toArchive.length} archivé(s) sous ${ARCHIVE_TITLE} > ${stamp} (${docUrl(archived.id)})` : '') +
+    `\n${countDocs(source.docs)} document(s) créé(s) sous ${docLink(parent)}` +
+      (archived ? `, ${toArchive.length} archivé(s) sous ${ARCHIVE_TITLE} > ${stamp} : ${docLink(archived)}` : '') +
       '.',
   );
 }
@@ -154,7 +155,7 @@ export async function prune(id: string, before: string, opts: WriteOptions = {})
   let archive: DocMeta | undefined = doc;
   if (titleKey(doc.title) !== titleKey(ARCHIVE_TITLE)) {
     archive = (await listChildren(id)).find((c) => titleKey(c.title) === titleKey(ARCHIVE_TITLE));
-    if (!archive) return console.log(`Aucun document « ${ARCHIVE_TITLE} » sous ${label(doc)} : rien à supprimer.`);
+    if (!archive) return console.log(`Aucun document « ${ARCHIVE_TITLE} » sous ${docLink(doc)} : rien à supprimer.`);
   }
   const entries = await listChildren(archive.id);
   const old = entries.filter((c) => {
@@ -163,14 +164,14 @@ export async function prune(id: string, before: string, opts: WriteOptions = {})
   });
   const unknown = entries.filter((c) => !STAMP_RE.test(c.title?.trim() ?? ''));
 
-  const plan = [`Archive : ${docUrl(archive.id)}`];
+  const plan = [`Archive : ${docLink(archive)}`];
   if (unknown.length) plan.push(`Ignorés (titre sans date AAAA-MM-JJ HHhMM) : ${unknown.map(label).join(', ')}`);
   if (!old.length) {
     console.log([...plan, `Aucune archive antérieure au ${before}.`].join('\n'));
     return;
   }
   plan.push(`\nÀ mettre à la corbeille (antérieures au ${before}, restaurables 30 jours) :`);
-  for (const c of old) plan.push(`  - ${label(c)}`);
+  for (const c of old) plan.push(`  - ${docLink(c)}`);
   if (!(await confirmPlan(plan, opts))) return;
   const writer = new Writer();
   for (const c of old) await writer.delete(c.id);

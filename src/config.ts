@@ -126,3 +126,22 @@ export function parseDocId(input: string | undefined, what = 'document'): string
 }
 
 export const docUrl = (id: string) => `${config.baseUrl}/docs/${id}/`;
+
+/**
+ * Liens cliquables dans le terminal (OSC 8, compris par iTerm2, Terminal.app récent, VS Code,
+ * GNOME Terminal…) : seulement vers un terminal, jamais dans un fichier ou un tube.
+ * `DOCS_HYPERLINKS=0` ou `1` force le choix.
+ */
+function hyperlinksEnabled(): boolean {
+  const forced = process.env.DOCS_HYPERLINKS;
+  if (forced === '0' || forced === '1') return forced === '1';
+  return Boolean(process.stdout.isTTY && process.stderr.isTTY) && process.env.TERM !== 'dumb';
+}
+
+/** `texte` cliquable vers `url` si le terminal le permet, sinon `texte` seul. */
+export const hyperlink = (url: string, text: string) =>
+  hyperlinksEnabled() ? `\x1b]8;;${url}\x1b\\${text}\x1b]8;;\x1b\\` : text;
+
+/** Titre et id, l'id cliquable vers le document : `« Titre » (588a1afd-…)`. */
+export const docLink = (d: { id: string; title?: string | null }) =>
+  `« ${d.title?.trim() || 'Sans titre'} » (${hyperlink(docUrl(d.id), d.id)})`;

@@ -1,6 +1,6 @@
 // Commandes unitaires : ls, tree, mv, rename, rm.
 import { type DocMeta, getDoc, isSameOrDescendant, listChildren } from './api.ts';
-import { docUrl, UserError } from './config.ts';
+import { docLink, UserError } from './config.ts';
 import { confirmPlan, type WriteOptions } from './confirm.ts';
 import { formatDate } from './snapshots.ts';
 import { cleanTitle, Writer } from './writer.ts';
@@ -9,7 +9,7 @@ export const label = (d: Pick<DocMeta, 'title'>) => `« ${d.title?.trim() || 'Sa
 
 export async function ls(id: string): Promise<void> {
   const doc = await getDoc(id);
-  console.log(`${label(doc)} — ${docUrl(doc.id)}`);
+  console.log(docLink(doc));
   const children = await listChildren(id);
   if (!children.length) return console.log('(aucun sous-document)');
   for (const c of children) {
@@ -48,35 +48,32 @@ export async function mv(id: string, targetId: string, opts: WriteOptions): Prom
   const [doc, target] = await Promise.all([getDoc(id), getDoc(targetId)]);
   if (isSameOrDescendant(target, doc)) {
     throw new UserError(
-      `Refus : ${label(target)} est ${doc.id === target.id ? 'le document lui-même' : 'un descendant du document à déplacer'}.`,
+      `Refus : ${docLink(target)} est ${doc.id === target.id ? 'le document lui-même' : 'un descendant du document à déplacer'}.`,
     );
   }
-  const plan = [
-    `Déplacer ${label(doc)} (${docUrl(doc.id)})`,
-    `  sous ${label(target)} (${docUrl(target.id)}), en dernier enfant`,
-  ];
+  const plan = [`Déplacer ${docLink(doc)}`, `  sous ${docLink(target)}, en dernier enfant`];
   if (doc.numchild) plan.push(`  avec ses sous-documents`);
   if (!(await confirmPlan(plan, opts))) return;
   await new Writer().move(id, targetId);
-  console.log(`Déplacé : ${docUrl(id)}`);
+  console.log(`Déplacé : ${docLink(doc)} sous ${docLink(target)}`);
 }
 
 export async function rename(id: string, title: string, opts: WriteOptions): Promise<void> {
   const doc = await getDoc(id);
   const finalTitle = cleanTitle(title);
-  if (!(await confirmPlan([`Renommer ${label(doc)} en « ${finalTitle} » (${docUrl(id)})`], opts))) return;
+  if (!(await confirmPlan([`Renommer ${docLink(doc)} en « ${finalTitle} »`], opts))) return;
   await new Writer().rename(id, finalTitle);
-  console.log(`Renommé : ${docUrl(id)}`);
+  console.log(`Renommé : ${docLink({ id, title: finalTitle })}`);
 }
 
 export async function rm(id: string, opts: WriteOptions): Promise<void> {
   const doc = await getDoc(id);
   const n = await countDescendants(doc);
   const plan = [
-    `Mettre à la corbeille ${label(doc)} (${docUrl(id)})${n ? `, avec ${n} sous-document(s)` : ''}`,
+    `Mettre à la corbeille ${docLink(doc)}${n ? `, avec ${n} sous-document(s)` : ''}`,
     '  (restaurable 30 jours depuis la corbeille de Docs)',
   ];
   if (!(await confirmPlan(plan, opts))) return;
   await new Writer().delete(id);
-  console.log(`Mis à la corbeille : ${label(doc)}`);
+  console.log(`Mis à la corbeille : ${docLink(doc)}`);
 }

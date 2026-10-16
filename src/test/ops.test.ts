@@ -23,6 +23,7 @@ test('ls et tree', async () => {
   });
   const ls = await cli(['ls', `${server.url}/docs/${root}/`]);
   assert.equal(ls.status, 0, ls.stderr);
+  assert.match(ls.stdout, /^« Racine » \([0-9a-f-]{36}\)\n/);
   assert.match(ls.stdout, /A, 1 enfant\(s\)/);
   const tree = await cli(['tree', root]);
   assert.match(tree.stdout, /├── A .*\n│   └── A1 .*\n└── B /);

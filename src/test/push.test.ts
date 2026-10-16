@@ -117,7 +117,8 @@ test('--dry-run : plan sans écriture ; sans --yes hors terminal : refus', async
   const dry = await cli(['push', dir, '--parent', parent, '--dry-run']);
   assert.equal(dry.status, 0, dry.stderr);
   assert.match(dry.stdout, /À archiver sous Archive \(créé\)/);
-  assert.match(dry.stdout, /« Existant »/);
+  assert.match(dry.stdout, /- « Existant » \([0-9a-f-]{36}\)/);
+  assert.match(dry.stdout, /Père : « Père » \([0-9a-f-]{36}\)\n/);
   assert.match(dry.stdout, /\+ « n »  ← n\.md/);
   const noYes = await cli(['push', dir, '--parent', parent]);
   assert.equal(noYes.status, 1);

@@ -7,6 +7,8 @@ import { config } from './config.ts';
 
 export interface PushTarget {
   hash: string;
+  /** Titre du père au moment du push (affiché sans requête quand rien n'a changé). */
+  parentTitle?: string;
   pushedAt: string;
   source: string;
   /** Document daté créé sous « Archive » à ce push. */
