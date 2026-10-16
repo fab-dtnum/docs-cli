@@ -105,3 +105,8 @@ vp run ready   # les deux, avant de livrer
 ```
 
 Les tests tournent contre une fausse API Docs en mémoire (`src/test/fake-docs.ts`).
+
+## Licence
+
+[MIT](LICENSE) — Copyright (c) 2026 Direction générale des Finances publiques (DGFiP).
+Conçu et développé par Pierre-Olivier Mauguet.

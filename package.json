@@ -3,6 +3,8 @@
   "version": "0.2.0",
   "private": true,
   "description": "Piloter docs.numerique.gouv.fr depuis la ligne de commande : pousser du Markdown en sous-documents, récupérer, lister, déplacer",
+  "license": "MIT",
+  "author": "Pierre-Olivier Mauguet",
   "bin": {
     "docs": "src/cli.ts"
   },
