@@ -71,6 +71,11 @@ Père (id fixe)
 ```
 
 - Titre : `title` du front matter, sinon `# …` en tête du fichier, sinon nom du fichier.
+- Images locales (`![…](schemas/x.png)`, sous le dossier poussé) : envoyées en pièces
+  jointes du père, puis référencées depuis le document ; une image inchangée n'est pas
+  renvoyée. png, jpg, gif, webp, svg ; 10 Mo au plus.
+- Citation contenant une liste (`> - …`) : rendue en contenu ordinaire, car une citation de
+  Docs ne contient que du texte (les puces y seraient fusionnées).
 - Push identique au précédent (même empreinte) : rien n'est fait ; `--force` pour forcer.
 - Toute écriture affiche son plan et demande confirmation ; `--dry-run` n'écrit rien,
   `--yes` ne demande rien. Suppression = corbeille Docs (30 jours).

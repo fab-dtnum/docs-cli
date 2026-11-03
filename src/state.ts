@@ -15,6 +15,8 @@ export interface PushTarget {
   archive?: string;
   /** Chemin relatif du fichier → id du document créé. */
   documents: Record<string, string>;
+  /** Empreinte SHA-256 d'une image → URL de sa pièce jointe (sur le père), réutilisée au push suivant. */
+  media?: Record<string, string>;
 }
 
 interface PushState {
