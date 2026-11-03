@@ -163,3 +163,38 @@ test('prune --before : archives datées antérieures à la corbeille, le reste i
   assert.equal(bad.status, 1);
   assert.match(bad.stderr, /AAAA-MM-JJ/);
 });
+
+test('push : images locales en pièces jointes du père, réutilisées au push suivant ; listes sorties des citations', async () => {
+  const parent = server.seed({ title: 'Père' });
+  const dir = localTree('img', {
+    'strategie.md':
+      '# Stratégie\n\n> **À retenir**\n> - un\n> - deux\n\n![Schéma](schemas/s.png)\n\n![Manque](schemas/x.png)\n',
+    'schemas/s.png': 'PNG-1',
+  });
+  const r = await cli(['push', dir, '--parent', parent, '--yes']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /↑ strategie\.md → schemas\/s\.png/);
+  assert.match(r.stdout, /! strategie\.md : schemas\/x\.png : fichier introuvable/);
+  const p = server.docs.get(parent)!;
+  assert.equal(p.attachments.size, 1);
+  const [key] = p.attachments.keys();
+  const md = server.findChild(parent, 'Stratégie')!.markdown;
+  assert.equal(
+    md,
+    `**À retenir**\n- un\n- deux\n\n![Schéma](${server.url}/media/${key})\n\n![Manque](schemas/x.png)\n`,
+  );
+
+  // Contenu modifié, image identique : pas de nouvel envoi.
+  writeFileSync(join(dir, 'strategie.md'), '# Stratégie\n\nV2\n\n![Schéma](schemas/s.png)\n');
+  const again = await cli(['push', dir, '--parent', parent, '--yes']);
+  assert.equal(again.status, 0, again.stderr);
+  assert.match(again.stdout, /1 déjà envoyée/);
+  assert.equal(p.attachments.size, 1);
+  assert.match(server.findChild(parent, 'Stratégie')!.markdown, new RegExp(`/media/${key}\\)`));
+
+  // Image modifiée : nouveau push même si le Markdown est identique.
+  writeFileSync(join(dir, 'schemas/s.png'), 'PNG-2');
+  const changed = await cli(['push', dir, '--parent', parent, '--yes']);
+  assert.equal(changed.status, 0, changed.stderr);
+  assert.equal(p.attachments.size, 2);
+});

@@ -7,7 +7,8 @@ import { confirmPlan, type WriteOptions } from './confirm.ts';
 import { countDocs, hashLocal, type LocalDoc, readLocal } from './local.ts';
 import { label } from './ops.ts';
 import { formatDate } from './snapshots.ts';
-import { getTarget, saveTarget } from './state.ts';
+import { replaceImages } from './prepare.ts';
+import { getTarget, loadState, saveTarget } from './state.ts';
 import { titleKey, Writer } from './writer.ts';
 
 export const ARCHIVE_TITLE = 'Archive';
@@ -77,12 +78,35 @@ export async function push(path: string, parentId: string, opts: PushOptions = {
     }
   };
   describe(source.docs, '  ');
+
+  // Images locales : pièces jointes du père, dont l'id ne change pas ; une image déjà envoyée
+  // sous ce père (même contenu) n'est pas renvoyée.
+  const all = flatten(source.docs);
+  const known = knownMedia(parentId);
+  const toUpload = new Map<string, { path: string; rels: string[] }>();
+  for (const d of all) {
+    for (const img of d.images ?? []) {
+      if (known[img.sha256]) continue;
+      const entry = toUpload.get(img.sha256) ?? { path: img.path, rels: [] };
+      entry.rels.push(`${d.rel} → ${img.ref}`);
+      toUpload.set(img.sha256, entry);
+    }
+  }
+  const reused = new Set(all.flatMap((d) => (d.images ?? []).filter((i) => known[i.sha256]).map((i) => i.sha256)));
+  if (toUpload.size || reused.size) {
+    plan.push(`\nImages, en pièces jointes de ${label(parent)} :`);
+    for (const { rels } of toUpload.values()) plan.push(`  ↑ ${rels.join(', ')}`);
+    if (reused.size) plan.push(`  (${reused.size} déjà envoyée(s) par un push précédent : réutilisée(s))`);
+  }
+  const issues = all.flatMap((d) => (d.imageIssues ?? []).map((i) => `  ! ${d.rel} : ${i}`));
+  if (issues.length) plan.push('\nImages laissées telles quelles (absentes de Docs) :', ...issues);
   if (!(await confirmPlan(plan, opts))) return;
 
   const writer = new Writer();
   const done: string[] = [];
   const documents: Record<string, string> = {};
   let archived: DocMeta | undefined;
+  let usedMedia: Record<string, string> = {};
   try {
     if (toArchive.length) {
       let archiveId = archive?.id;
@@ -106,9 +130,16 @@ export async function push(path: string, parentId: string, opts: PushOptions = {
         done.push(`archivé ${label(c)}`);
       }
     }
+    const media: Record<string, string> = {};
+    for (const i of reused) media[i] = known[i];
+    for (const [sha, { path: file, rels }] of toUpload) {
+      media[sha] = await writer.uploadImage(parentId, file);
+      done.push(`envoyé ${rels[0].split(' → ')[1]}`);
+    }
     const create = async (docs: LocalDoc[], under: string) => {
       for (const d of docs) {
-        const created = await writer.create({ parentId: under, title: d.title, markdown: d.markdown });
+        const markdown = replaceImages(d.markdown, new Map((d.images ?? []).map((i) => [i.ref, media[i.sha256]])));
+        const created = await writer.create({ parentId: under, title: d.title, markdown });
         documents[d.rel] = created.id;
         done.push(`créé ${docLink(created)}`);
         console.log(`Créé : ${docLink(created)}`);
@@ -116,6 +147,7 @@ export async function push(path: string, parentId: string, opts: PushOptions = {
       }
     };
     await create(source.docs, parentId);
+    usedMedia = media;
   } catch (e) {
     console.error(`\nPush interrompu. Déjà fait :\n${done.map((l) => `  - ${l}`).join('\n') || '  (rien)'}`);
     console.error('Le prochain push refera un cycle complet (les documents déjà créés seront archivés).');
@@ -129,12 +161,24 @@ export async function push(path: string, parentId: string, opts: PushOptions = {
     source: resolve(path),
     ...(archived && { archive: archived.id }),
     documents,
+    ...(Object.keys(usedMedia).length && { media: usedMedia }),
   });
   console.log(
     `\n${countDocs(source.docs)} document(s) créé(s) sous ${docLink(parent)}` +
       (archived ? `, ${toArchive.length} archivé(s) sous ${ARCHIVE_TITLE} > ${stamp} : ${docLink(archived)}` : '') +
       '.',
   );
+}
+
+const flatten = (docs: LocalDoc[]): LocalDoc[] => docs.flatMap((d) => [d, ...flatten(d.children)]);
+
+/** Images déjà envoyées sous ce père (push d'un dossier ou de fichiers seuls). */
+function knownMedia(parentId: string): Record<string, string> {
+  const known: Record<string, string> = {};
+  for (const [key, target] of Object.entries(loadState().targets)) {
+    if (key === parentId || key.startsWith(`${parentId}#`)) Object.assign(known, target.media);
+  }
+  return known;
 }
 
 const STAMP_RE = /^(\d{4}-\d{2}-\d{2}) \d{2}h\d{2}(?: \(\d+\))?$/;

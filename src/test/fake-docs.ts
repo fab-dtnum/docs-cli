@@ -15,6 +15,8 @@ export interface FakeDoc {
   markdown: string;
   updated_at: string;
   children: string[];
+  /** Pièces jointes : clé `<id>/attachments/<uuid>.<ext>` → contenu reçu. */
+  attachments: Map<string, string>;
   /** Suppression douce : toujours lisible par GET, absent des listes d'enfants. */
   deleted_at?: string;
 }
@@ -75,7 +77,7 @@ export async function startFakeDocs(): Promise<FakeServer> {
     const id = newId();
     const siblings = parent ? docs.get(parent)!.children : roots;
     const path = (parent ? docs.get(parent)!.path : '') + takeStep(parent);
-    docs.set(id, { id, title, parent, path, markdown, updated_at: stamp(), children: [] });
+    docs.set(id, { id, title, parent, path, markdown, updated_at: stamp(), children: [], attachments: new Map() });
     siblings.push(id);
     return id;
   };
@@ -192,6 +194,15 @@ export async function startFakeDocs(): Promise<FakeServer> {
       const { json, file } = await parseBody(req);
       const id = add(null, file ? file.name : typeof json?.title === 'string' ? json.title : '', file?.text ?? '');
       return send(201, meta(docs.get(id)!));
+    }
+    if ((m = p.match(/^\/api\/v1.0\/documents\/([^/]+)\/attachment-upload\/$/)) && method === 'POST') {
+      const d = docs.get(m[1]);
+      if (!d) return send(404, { detail: 'Not found.' });
+      const { file } = await parseBody(req);
+      if (!file) return send(400, { file: ['No file was submitted.'] });
+      const key = `${d.id}/attachments/${newId()}.${file.name.split('.').pop()}`;
+      d.attachments.set(key, file.text);
+      return send(201, { file: `/api/v1.0/documents/${d.id}/media-check/?key=${encodeURIComponent(key)}` });
     }
     if ((m = p.match(/^\/api\/v1.0\/documents\/([^/]+)\/move\/$/)) && method === 'POST') {
       const d = docs.get(m[1]);

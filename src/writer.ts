@@ -2,7 +2,10 @@
 // existant (il appartient au serveur de collaboration) : on crée par import d'un fichier .md.
 // Chaque commande affiche son plan et le fait confirmer (confirm.ts) avant d'appeler ce module.
 import { type DocMeta, getDoc, isDocMeta, rawWrite } from './api.ts';
+import { readFileSync } from 'node:fs';
+import { basename, extname } from 'node:path';
 import { config, type CreateMode, UserError } from './config.ts';
+import { IMAGE_TYPES } from './prepare.ts';
 
 export interface CreateRequest {
   parentId: string;
@@ -66,6 +69,23 @@ export class Writer {
     // La réponse du PATCH décrit déjà le document : une lecture de moins.
     const renamed = await this.rename(id, finalTitle);
     return renamed && isDocMeta(renamed) && renamed.title === finalTitle ? renamed : getDoc(id);
+  }
+
+  /**
+   * Envoie une image en pièce jointe de `docId` ; renvoie son URL `/media/…`, lisible par
+   * quiconque lit ce document ou l'un de ses ancêtres (et donc ses sous-documents).
+   */
+  async uploadImage(docId: string, path: string): Promise<string> {
+    const form = new FormData();
+    const type = IMAGE_TYPES[extname(path).toLowerCase()] ?? 'application/octet-stream';
+    form.append('file', new Blob([readFileSync(path)], { type }), basename(path));
+    const r = await rawWrite<{ file?: string }>('POST', `documents/${docId}/attachment-upload/`, form);
+    // Réponse : `/api/v1.0/documents/<id>/media-check/?key=<id>/attachments/<uuid>.<ext>`.
+    const key = typeof r?.file === 'string' ? new URL(r.file, config.baseUrl).searchParams.get('key') : null;
+    if (!key || !/^[\w-]+(?:\/[\w-]+)*\/attachments\/[\w-]+\.\w+$/.test(key)) {
+      throw new UserError(`Réponse inattendue de Docs à l'envoi de ${basename(path)}.`);
+    }
+    return `${config.baseUrl}/media/${key}`;
   }
 
   async rename(id: string, title: string): Promise<DocMeta | null> {

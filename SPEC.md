@@ -108,8 +108,19 @@ Pousse du Markdown sous un document **père** dont l'id ne change jamais.
 - `fichier.md` → un sous-document. Titre : champ `title` du front matter YAML s'il existe,
   sinon titre `# …` en tête du fichier (retiré du contenu), sinon nom du fichier sans `.md`.
   Le front matter n'est pas envoyé.
-- Les liens relatifs et images locales ne sont pas transférés (Docs ne reçoit que le
-  Markdown) : un dossier sans `.md` (pièces jointes d'un `pull`) est ignoré.
+- Images locales (`![texte](chemin)` relatif, hors bloc de code) : envoyées en pièces
+  jointes du **père** (`POST documents/P/attachment-upload/`), puis remplacées dans le
+  Markdown par leur URL `/media/…`. Le contenu d'un document ne s'écrit qu'à sa création :
+  la pièce jointe doit donc exister avant, sur un document stable. Docs autorise un média à
+  qui lit le document qui le porte ou l'un de ses ancêtres : les lecteurs du père, donc des
+  sous-documents (sauf un accès donné sur un sous-document seul). Retenues : extension png,
+  jpg, jpeg, gif, webp, svg, fichier sous le dossier poussé (liens symboliques résolus),
+  10 Mo au plus ; les autres restent telles quelles et sont signalées dans le plan. Une image
+  déjà envoyée sous ce père (même SHA-256, §4.3) n'est pas renvoyée.
+- Citation contenant une liste : ses lignes sont sorties de la citation (le bloc citation
+  de Docs ne contient que du texte, ses puces y seraient fusionnées).
+- Les autres liens relatifs ne sont pas transférés : un dossier sans `.md` (pièces jointes
+  d'un `pull`) est ignoré.
 - `dossier/` → miroir récursif : chaque `x.md` devient un sous-document ; chaque
   sous-dossier `x/` devient un sous-document `x` dont les enfants sont son contenu,
   avec `x.md` comme contenu s'il existe à côté (même structure que la sortie de `pull`).
@@ -131,8 +142,9 @@ Pour `docs push dossier/ --parent P` :
    daté `AAAA-MM-JJ HHhMM` (heure locale ; suffixe ` (2)` si le nom existe déjà).
 5. Déplacer chaque enfant à archiver sous ce document daté (`move`, `last-child` : ses
    descendants suivent). Ordre conservé.
-6. Créer l'arbre local sous `P`, parents avant enfants.
-7. Enregistrer l'empreinte et les ids créés dans l'état (§4.3).
+6. Envoyer les images locales pas encore envoyées en pièces jointes de `P`.
+7. Créer l'arbre local sous `P`, parents avant enfants.
+8. Enregistrer l'empreinte, les ids créés et les URL des images dans l'état (§4.3).
 
 Si `P` n'a aucun enfant hors `Archive`, les étapes 4 et 5 sont sautées (pas d'archive vide).
 
@@ -203,15 +215,17 @@ racine puis déplacement, pour une instance où le fichier joint à `children/` 
       "pushedAt": "2026-10-16T14:30:00.000Z",
       "source": "/chemin/absolu/du/dossier",
       "archive": "<id du document daté créé à ce push, s'il y en a un>",
-      "documents": { "chemin/relatif.md": "<id créé>" }
+      "documents": { "chemin/relatif.md": "<id créé>" },
+      "media": { "<sha256 d'une image>": "https://…/media/<id-père>/attachments/<uuid>.png" }
     },
     "<id-père>#<titre normalisé>": { "…": "push d'un fichier seul" }
   }
 }
 ```
 
-- L'empreinte couvre, pour chaque document, son chemin relatif, son titre et son
-  contenu envoyé : renommer, ajouter, supprimer ou modifier un fichier change l'empreinte.
+- L'empreinte couvre, pour chaque document, son chemin relatif, son titre, son
+  contenu envoyé et ses images : renommer, ajouter, supprimer ou modifier un fichier ou
+  une image change l'empreinte.
 - Seul usage : **sauter un push inchangé**. Elle ne garantit pas que Docs n'a pas été
   modifié entre-temps à la main (un enfant ajouté dans Docs ne déclenche pas de push) ;
   `--force` pousse quand même.

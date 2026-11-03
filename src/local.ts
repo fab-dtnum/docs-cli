@@ -2,9 +2,10 @@
 // récursif (même structure que la sortie de `pull` : `x.md` + dossier `x/` pour ses enfants).
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { basename, join, posix } from 'node:path';
+import { basename, dirname, join, posix } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { UserError } from './config.ts';
+import { findLocalImages, liftQuoteLists, type LocalImage } from './prepare.ts';
 import { cleanTitle } from './writer.ts';
 
 export interface LocalDoc {
@@ -13,6 +14,10 @@ export interface LocalDoc {
   title: string;
   markdown: string;
   children: LocalDoc[];
+  /** Images locales du contenu, envoyées en pièces jointes au push. */
+  images?: LocalImage[];
+  /** Images locales laissées telles quelles (introuvables, hors du dossier…). */
+  imageIssues?: string[];
 }
 
 const FRONT_MATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
@@ -56,9 +61,18 @@ function isYamlObject(raw: string): boolean {
 const collator = new Intl.Collator('fr', { numeric: true, sensitivity: 'base' });
 const isHidden = (name: string) => name.startsWith('.');
 
-function readFile(path: string, rel: string): LocalDoc {
-  const { title, markdown } = parseMarkdown(readFileSync(path, 'utf8'), basename(path, '.md'));
-  return { rel, title, markdown, children: [] };
+function readFile(path: string, rel: string, root: string): LocalDoc {
+  const parsed = parseMarkdown(readFileSync(path, 'utf8'), basename(path, '.md'));
+  const markdown = liftQuoteLists(parsed.markdown);
+  const { images, issues } = findLocalImages(markdown, path, root);
+  return {
+    rel,
+    title: parsed.title,
+    markdown,
+    children: [],
+    ...(images.length && { images }),
+    ...(issues.length && { imageIssues: issues }),
+  };
 }
 
 /** Contient-il au moins un `.md` (un dossier de pièces jointes seules est ignoré) ? */
@@ -68,7 +82,7 @@ function hasMarkdown(dir: string): boolean {
   );
 }
 
-function readDir(dir: string, rel: string): LocalDoc[] {
+function readDir(dir: string, rel: string, root = dir): LocalDoc[] {
   const entries = readdirSync(dir, { withFileTypes: true }).filter((e) => !isHidden(e.name));
   const dirs = new Set(entries.filter((e) => e.isDirectory() && hasMarkdown(join(dir, e.name))).map((e) => e.name));
   const files = new Set(entries.filter((e) => e.isFile() && e.name.endsWith('.md')).map((e) => e.name.slice(0, -3)));
@@ -77,9 +91,9 @@ function readDir(dir: string, rel: string): LocalDoc[] {
     const fileRel = posix.join(rel, `${name}.md`);
     const dirRel = posix.join(rel, name);
     const doc = files.has(name)
-      ? readFile(join(dir, `${name}.md`), fileRel)
+      ? readFile(join(dir, `${name}.md`), fileRel, root)
       : { rel: dirRel, title: cleanTitle(name), markdown: '', children: [] };
-    if (dirs.has(name)) doc.children = readDir(join(dir, name), dirRel);
+    if (dirs.has(name)) doc.children = readDir(join(dir, name), dirRel, root);
     return doc;
   });
 }
@@ -97,12 +111,18 @@ export function readLocal(path: string): LocalSource {
     return { kind: 'dir', docs };
   }
   if (!path.endsWith('.md')) throw new UserError(`Fichier Markdown attendu (.md) : ${path}`);
-  return { kind: 'file', docs: [readFile(path, basename(path))] };
+  return { kind: 'file', docs: [readFile(path, basename(path), dirname(path))] };
 }
 
-/** Empreinte de ce qui serait envoyé : chemin, titre et contenu de chaque document. */
+/** Empreinte de ce qui serait envoyé : chemin, titre, contenu et images de chaque document. */
 export function hashLocal(source: LocalSource): string {
-  const strip = (d: LocalDoc): unknown => [d.rel, d.title, d.markdown, d.children.map(strip)];
+  const strip = (d: LocalDoc): unknown => [
+    d.rel,
+    d.title,
+    d.markdown,
+    d.children.map(strip),
+    ...(d.images ? [d.images.map((i) => [i.ref, i.sha256])] : []),
+  ];
   return createHash('sha256')
     .update(JSON.stringify([source.kind, source.docs.map(strip)]))
     .digest('hex');
