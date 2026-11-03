@@ -237,6 +237,7 @@ racine puis déplacement, pour une instance où le fichier joint à `children/` 
 | `DOCS_CONCURRENCY`                 | `4`                              | lectures en parallèle (`pull`)                  |
 | `DOCS_BROWSER`                     | `firefox`                        | navigateur de `docs login`                      |
 | `HTTPS_PROXY`, `NO_PROXY`          | —                                | proxy d'entreprise                              |
+| `DOCS_PROXY_PAC`                   | —                                | fichier PAC (URL ou chemin) pour `docs login`   |
 
 ## 6. Tests
 

@@ -83,7 +83,9 @@ Voir [.env.example](.env.example). `DOCS_SESSIONID` et `DOCS_CSRFTOKEN` sont rem
 ## Dépannage
 
 **Proxy d'entreprise** : `HTTPS_PROXY` / `NO_PROXY` dans le shell ou le `.env` (Node ≥ 24.14,
-sinon `NODE_USE_ENV_PROXY=1`).
+sinon `NODE_USE_ENV_PROXY=1`). Si le proxy est décrit par un fichier `.pac`, ajoutez
+`DOCS_PROXY_PAC` (URL ou chemin local) : le navigateur de `docs login` l'utilise à la place
+de `HTTPS_PROXY`. Les autres commandes ne lisent pas les PAC : gardez `HTTPS_PROXY` pour elles.
 
 **Certificat HTTPS non reconnu** : le binaire charge les certificats du système (comme `--use-system-ca`) ; installez le
 certificat racine de l'organisation, ou `NODE_EXTRA_CA_CERTS=/chemin/ca.pem`. Ne désactivez
