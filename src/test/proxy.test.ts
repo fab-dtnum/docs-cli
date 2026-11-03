@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { playwrightLaunchProxy, playwrightProxy } from '../proxy.ts';
+import { displayPac, playwrightLaunchProxy, playwrightProxy } from '../proxy.ts';
 
 const KEYS = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'NO_PROXY', 'no_proxy', 'DOCS_PROXY_PAC'];
 const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
@@ -70,4 +70,13 @@ test('DOCS_PROXY_PAC en chemin local : file:// pour Firefox, data: pour Chromium
 test('sans DOCS_PROXY_PAC : option proxy de Playwright', () => {
   setEnv({ HTTPS_PROXY: 'http://a:1' });
   assert.equal(playwrightLaunchProxy('firefox').proxy?.server, 'http://a:1');
+});
+
+test('displayPac : ni identifiants ni paramètres', () => {
+  assert.equal(
+    displayPac(new URL('https://p%40ole:s%3Acret@wpad.interne:8080/proxy.pac?token=abc#x')),
+    'https://wpad.interne:8080/proxy.pac',
+  );
+  const file = join(tmpdir(), 'proxy.pac');
+  assert.equal(displayPac(pathToFileURL(file)), file);
 });

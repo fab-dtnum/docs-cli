@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { chromium, firefox } from 'playwright';
 import { getMe } from './api.ts';
 import { config, ensureHome, isValidCsrfToken, isValidSessionId, setEnvVar, UserError } from './config.ts';
-import { envPac, envProxy, playwrightLaunchProxy } from './proxy.ts';
+import { displayPac, envPac, envProxy, playwrightLaunchProxy } from './proxy.ts';
 
 const TIMEOUT_MS = 5 * 60_000;
 
@@ -115,7 +115,7 @@ function navigationHelp(label: string, message: string): string {
   if (/NAME_NOT_RESOLVED|UNKNOWN_HOST|PROXY|TUNNEL|NET_RESET|CONNECTION_REFUSED/.test(error)) {
     lines.push(
       pac
-        ? `Fichier PAC utilisé : ${pac.href}. Vérifiez qu'il est lisible et qu'il désigne un proxy joignable.`
+        ? `Fichier PAC utilisé : ${displayPac(pac)}. Vérifiez qu'il est lisible et qu'il désigne un proxy joignable.`
         : proxy
           ? `Proxy utilisé : ${proxy.url.protocol}//${proxy.url.host}. Vérifiez qu'il est joignable et qu'il autorise ce site.`
           : 'Aucun proxy défini : si votre réseau en impose un, exportez HTTPS_PROXY (et NO_PROXY) ou DOCS_PROXY_PAC puis relancez.',
