@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { chromium, firefox } from 'playwright';
 import { getMe } from './api.ts';
 import { config, ensureHome, isValidCsrfToken, isValidSessionId, setEnvVar, UserError } from './config.ts';
-import { envProxy, playwrightProxy } from './proxy.ts';
+import { envPac, envProxy, playwrightLaunchProxy } from './proxy.ts';
 
 const TIMEOUT_MS = 5 * 60_000;
 
@@ -39,7 +39,7 @@ export async function login(browser: BrowserName = parseBrowser()): Promise<void
     context = await BROWSERS[browser].launchPersistentContext(profileDir, {
       headless: false,
       viewport: null,
-      proxy: playwrightProxy(),
+      ...playwrightLaunchProxy(browser),
     });
   } catch (e) {
     if (/Executable doesn't exist/.test((e as Error).message)) {
@@ -108,14 +108,17 @@ function navigationHelp(label: string, message: string): string {
     message.match(
       /net::[A-Z_]+|NS_ERROR_[A-Z_]+|SEC_ERROR_[A-Z_]+|MOZILLA_PKIX_ERROR_[A-Z_]+|SSL_ERROR_[A-Z_]+/,
     )?.[0] ?? message.split('\n')[0];
+  const pac = envPac();
   const proxy = envProxy();
   const lines = [`Impossible d'ouvrir ${config.baseUrl} dans ${label} (${error}).`];
   // Derrière un proxy, Firefox signale un hôte injoignable par NS_ERROR_NET_RESET.
   if (/NAME_NOT_RESOLVED|UNKNOWN_HOST|PROXY|TUNNEL|NET_RESET|CONNECTION_REFUSED/.test(error)) {
     lines.push(
-      proxy
-        ? `Proxy utilisé : ${proxy.url.protocol}//${proxy.url.host}. Vérifiez qu'il est joignable et qu'il autorise ce site.`
-        : 'Aucun proxy défini : si votre réseau en impose un, exportez HTTPS_PROXY (et NO_PROXY) puis relancez.',
+      pac
+        ? `Fichier PAC utilisé : ${pac.href}. Vérifiez qu'il est lisible et qu'il désigne un proxy joignable.`
+        : proxy
+          ? `Proxy utilisé : ${proxy.url.protocol}//${proxy.url.host}. Vérifiez qu'il est joignable et qu'il autorise ce site.`
+          : 'Aucun proxy défini : si votre réseau en impose un, exportez HTTPS_PROXY (et NO_PROXY) ou DOCS_PROXY_PAC puis relancez.',
       `Diagnostic : getent hosts ${new URL(config.baseUrl).hostname} ; curl -sI ${config.baseUrl}/`,
     );
   }
