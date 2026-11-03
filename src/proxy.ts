@@ -53,6 +53,11 @@ export function envPac(): URL | undefined {
   return pathToFileURL(resolve(raw.replace(/^~(?=\/|$)/, homedir())));
 }
 
+/** Adresse du PAC à afficher : sans identifiants ni paramètres (qui peuvent porter un jeton). */
+export function displayPac(pac: URL): string {
+  return pac.protocol === 'file:' ? fileURLToPath(pac) : `${pac.protocol}//${pac.host}${pac.pathname}`;
+}
+
 /**
  * Options de lancement Playwright pour le proxy : le navigateur n'utilise ni HTTPS_PROXY ni le
  * PAC du système. Un PAC (DOCS_PROXY_PAC) prime sur HTTPS_PROXY : l'option `proxy` de
@@ -68,7 +73,8 @@ export function playwrightLaunchProxy(browser: 'chromium' | 'firefox') {
     // network.proxy.type 2 = « Adresse de configuration automatique du proxy ».
     return { firefoxUserPrefs: { 'network.proxy.type': 2, 'network.proxy.autoconfig_url': pac.href } };
   }
-  // Chromium refuse les PAC en file:// : on lui passe le contenu en data:.
+  // Chromium refuse les PAC en file:// : on lui passe le contenu en data:. L'URL d'un PAC
+  // distant, identifiants compris, est visible dans la liste des processus pendant la connexion.
   const url =
     pac.protocol === 'file:'
       ? `data:application/x-ns-proxy-autoconfig;base64,${readFileSync(pac).toString('base64')}`
