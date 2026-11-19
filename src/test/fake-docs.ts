@@ -13,6 +13,8 @@ export interface FakeDoc {
   parent: string | null;
   path: string;
   markdown: string;
+  /** HTML renvoyé par `formatted-content?content_format=html`. */
+  html: string;
   updated_at: string;
   children: string[];
   /** Pièces jointes : clé `<id>/attachments/<uuid>.<ext>` → contenu reçu. */
@@ -24,6 +26,7 @@ export interface FakeDoc {
 export interface Seed {
   title: string;
   markdown?: string;
+  html?: string;
   children?: Seed[];
 }
 
@@ -42,7 +45,9 @@ export interface FakeServer {
   childFileIgnored?: boolean;
   /** Nombre de réponses 429 à renvoyer avant de répondre normalement (`Infinity` : toujours). */
   throttle?: number;
-  add(parent: string | null, title: string, markdown?: string): string;
+  /** Pièces jointes servies sous `/media/…` (session requise) : chemin → type et contenu. */
+  media: Map<string, { type: string; data: Buffer }>;
+  add(parent: string | null, title: string, markdown?: string, html?: string): string;
   seed(tree: Seed, parent?: string | null): string;
   childrenOf(id: string): FakeDoc[];
   /** Document actif (ni supprimé, ni dans un sous-arbre supprimé). */
@@ -73,11 +78,21 @@ export async function startFakeDocs(): Promise<FakeServer> {
     nextStep.set(id, 0);
     for (const c of d.children) repath(c, path + takeStep(id));
   };
-  const add = (parent: string | null, title: string, markdown = '') => {
+  const add = (parent: string | null, title: string, markdown = '', html = '') => {
     const id = newId();
     const siblings = parent ? docs.get(parent)!.children : roots;
     const path = (parent ? docs.get(parent)!.path : '') + takeStep(parent);
-    docs.set(id, { id, title, parent, path, markdown, updated_at: stamp(), children: [], attachments: new Map() });
+    docs.set(id, {
+      id,
+      title,
+      parent,
+      path,
+      markdown,
+      html,
+      updated_at: stamp(),
+      children: [],
+      attachments: new Map(),
+    });
     siblings.push(id);
     return id;
   };
@@ -97,9 +112,10 @@ export async function startFakeDocs(): Promise<FakeServer> {
     requests: [],
     writes: () => state.requests.filter((r) => !r.startsWith('GET ')),
     pageSize: 2,
+    media: new Map(),
     add,
     seed(tree, parent = null) {
-      const id = add(parent, tree.title, tree.markdown ?? '');
+      const id = add(parent, tree.title, tree.markdown ?? '', tree.html ?? '');
       for (const c of tree.children ?? []) state.seed(c, id);
       return id;
     },
@@ -167,6 +183,13 @@ export async function startFakeDocs(): Promise<FakeServer> {
     if (method === 'GET' && p === '/api/v1.0/config/')
       return send(200, { ENVIRONMENT: 'test', CONVERSION_UPLOAD_ENABLED: true });
 
+    if (method === 'GET' && p.startsWith('/media/')) {
+      const file = state.media.get(p);
+      if (!file) return send(404, { detail: 'Not found.' });
+      res.writeHead(200, { 'content-type': file.type });
+      return res.end(file.data);
+    }
+
     let m: RegExpMatchArray | null;
     if ((m = p.match(/^\/api\/v1.0\/documents\/([^/]+)\/children\/$/))) {
       const parent = docs.get(m[1]);
@@ -219,7 +242,8 @@ export async function startFakeDocs(): Promise<FakeServer> {
     if ((m = p.match(/^\/api\/v1.0\/documents\/([^/]+)\/formatted-content\/$/)) && method === 'GET') {
       const d = docs.get(m[1]);
       if (!d) return send(404, { detail: 'Not found.' });
-      return send(200, { id: d.id, title: d.title, content: d.markdown || null });
+      const content = u.searchParams.get('content_format') === 'html' ? d.html : d.markdown;
+      return send(200, { id: d.id, title: d.title, content: content || null });
     }
     if ((m = p.match(/^\/api\/v1.0\/documents\/([^/]+)\/$/))) {
       const d = docs.get(m[1]);

@@ -68,6 +68,7 @@ docs doctor
 docs ls <id>
 docs tree <id> [--depth N]
 docs pull <id> [--out <dossier>] [--force]
+docs export <id> [--format pdf|html|md] [--merge | --split] [--depth N] [--out <dossier>] [--dry-run]
 docs push <fichier.md|dossier> --parent <id> [--force] [--dry-run] [--yes]
 docs prune <id> --before <AAAA-MM-JJ> [--dry-run] [--yes]
 docs new <modèle> --parent <id> [--title <titre>] [--var clé=valeur]… [--dry-run] [--yes]
@@ -98,6 +99,26 @@ descendants dans `<out>/<id>-AAAA-MM-JJ-HHhMM/` (`--out` par défaut : `./data`)
 - **Reprise** après interruption (journal `.<id>.partial/`).
 - Pièces jointes téléchargées, liens internes réécrits en chemins relatifs (coffre Obsidian).
 - Contenu lu depuis le Y.js du document quand l'API le fournit, sinon `formatted-content`.
+
+### `export`
+
+Livrable (pdf, html ou md) à partir du contenu de l'API ; lecture seule, sans état. Par défaut le
+document seul (comme l'export de l'interface de Docs, dont les sous-documents ne sont que des
+liens) ; `--merge` : un fichier avec les descendants (titres par profondeur) ; `--split` : un
+zip avec un fichier par document (arborescence de `pull`). Voir le README (« `export` en
+bref ») et `docs/export-recherche.md` (ce que l'API fournit, et ses pertes).
+
+- Source : `formatted-content?content_format=html` (pdf, html) ou `markdown` (md). Le serveur
+  supprime les blocs inconnus de son schéma (Mermaid, formules) : non exportables.
+- Images : `/media/…` téléchargées avec la session et intégrées en `data:` (pdf, html) ou
+  copiées dans `media/` (md) ; toute autre origine refusée, mentionnée dans le fichier.
+- PDF : page HTML imprimée par Chromium (Playwright), sans JavaScript ni réseau.
+- Liens internes (`--merge`, pdf et html) : un lien vers un document exporté (`data-doc-id` ou URL
+  `…/docs/<id>/` de l'instance) devient `#doc-<id>`, ancre de sa section ; les autres liens sont
+  conservés. Le PDF en fait des liens internes cliquables.
+- Écriture : fichier en 0600, jamais d'écrasement : le fichier existant est conservé, le nouveau prend
+  un numéro (`nom(1).pdf`, `nom(2).pdf`…). Code de sortie 1 si un document
+  est en erreur (export partiel).
 
 ### `push`
 
@@ -241,17 +262,18 @@ racine puis déplacement, pour une instance où le fichier joint à `children/` 
 
 ## 5. Variables d'environnement (`$DOCS_HOME/.env`)
 
-| Variable                           | Défaut                           | Rôle                                            |
-| ---------------------------------- | -------------------------------- | ----------------------------------------------- |
-| `DOCS_SESSIONID`, `DOCS_CSRFTOKEN` | —                                | écrits par `docs login`                         |
-| `DOCS_BASE_URL`                    | `https://docs.numerique.gouv.fr` | instance                                        |
-| `DOCS_TEMPLATES`                   | —                                | id du document qui contient les modèles (`new`) |
-| `DOCS_CREATE_MODE`                 | `children`                       | `children` ou `move` (§4.2)                     |
-| `DOCS_RATE_PER_MINUTE`             | `60`                             | débit maximal                                   |
-| `DOCS_CONCURRENCY`                 | `4`                              | lectures en parallèle (`pull`)                  |
-| `DOCS_BROWSER`                     | `firefox`                        | navigateur de `docs login`                      |
-| `HTTPS_PROXY`, `NO_PROXY`          | —                                | proxy d'entreprise                              |
-| `DOCS_PROXY_PAC`                   | —                                | fichier PAC (URL ou chemin) pour `docs login`   |
+| Variable                           | Défaut                           | Rôle                                                   |
+| ---------------------------------- | -------------------------------- | ------------------------------------------------------ |
+| `DOCS_SESSIONID`, `DOCS_CSRFTOKEN` | —                                | écrits par `docs login`                                |
+| `DOCS_BASE_URL`                    | `https://docs.numerique.gouv.fr` | instance                                               |
+| `DOCS_TEMPLATES`                   | —                                | id du document qui contient les modèles (`new`)        |
+| `DOCS_CREATE_MODE`                 | `children`                       | `children` ou `move` (§4.2)                            |
+| `DOCS_RATE_PER_MINUTE`             | `60`                             | débit maximal                                          |
+| `DOCS_CONCURRENCY`                 | `4`                              | lectures en parallèle (`pull`)                         |
+| `DOCS_BROWSER`                     | `firefox`                        | navigateur de `docs login`                             |
+| `DOCS_CHROME_PATH`                 | —                                | Chrome/Chromium déjà installé, pour le PDF de `export` |
+| `HTTPS_PROXY`, `NO_PROXY`          | —                                | proxy d'entreprise                                     |
+| `DOCS_PROXY_PAC`                   | —                                | fichier PAC (URL ou chemin) pour `docs login`          |
 
 ## 6. Tests
 
