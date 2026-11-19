@@ -374,7 +374,7 @@ export function findAttachments(body: string): { text: string; media: string }[]
 }
 
 /** Liens vers les pièces jointes téléchargées → liens relatifs ; les autres gardent l'URL de Docs. */
-function rewriteAttachmentLinks(body: string, from: string, fileByMedia: Map<string, string>): string {
+export function rewriteAttachmentLinks(body: string, from: string, fileByMedia: Map<string, string>): string {
   return body.replace(attachmentRe(), (match, text: string, media: string) => {
     const target = fileByMedia.get(media);
     if (!target) return match;
@@ -451,7 +451,7 @@ export function sanitize(title: string): string {
 }
 
 /** Suffixe « (2) », « (3) »… en cas de doublon entre frères (insensible à la casse, comme macOS). */
-function uniqueName(usedNames: Map<string, Set<string>>, dir: string, name: string): string {
+export function uniqueName(usedNames: Map<string, Set<string>>, dir: string, name: string): string {
   const used = usedNames.get(dir) ?? new Set();
   usedNames.set(dir, used);
   let candidate = name;

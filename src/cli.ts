@@ -12,6 +12,9 @@ const USAGE = `Usage : docs <commande> …   (<id> : UUID ou URL d'un document D
   ls <id>                                 Sous-documents directs
   tree <id> [--depth N]                   Arbre des sous-documents
   pull <id> [--out <dossier>] [--force]   Instantané Markdown daté (défaut : ./data), seul le delta est téléchargé
+  export <id> [--format pdf|html|md] [--merge | --split] [--depth N] [--out <dossier>] [--dry-run]
+                                          Exporte le document (seul, fusionné avec ses sous-documents, ou un fichier par
+                                          document dans un zip). Défaut : pdf, dans ./export
   push <fichier.md|dossier> --parent <id> [--force]
                                           Archive les sous-documents actuels sous Archive > date, puis crée les nouveaux
   prune <id> --before AAAA-MM-JJ          Met à la corbeille les archives datées antérieures à ce jour
@@ -86,6 +89,30 @@ async function main(argv: string[]): Promise<number> {
       const { pull } = await import('./pull.ts');
       await pull(parseDocId(positionals[0]), { force: Boolean(values.force) });
       return 0;
+    }
+    case 'export': {
+      const { values, positionals } = args(rest, {
+        format: { type: 'string' },
+        out: { type: 'string' },
+        depth: { type: 'string' },
+        merge: { type: 'boolean' },
+        split: { type: 'boolean' },
+        'dry-run': { type: 'boolean' },
+      });
+      const raw = values.depth as string | undefined;
+      const depth = raw === undefined ? undefined : Number(raw);
+      if (depth !== undefined && (!Number.isInteger(depth) || depth < 0)) {
+        throw new UserError(`--depth attend un entier positif ou nul : ${raw}`);
+      }
+      const { exportDoc, parseFormat } = await import('./export.ts');
+      return exportDoc(parseDocId(positionals[0]), {
+        format: parseFormat(values.format as string | undefined),
+        out: (values.out as string | undefined) ?? 'export',
+        depth,
+        merge: Boolean(values.merge),
+        split: Boolean(values.split),
+        dryRun: Boolean(values['dry-run']),
+      });
     }
     case 'push': {
       const { values, positionals } = args(rest, {

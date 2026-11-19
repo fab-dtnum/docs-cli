@@ -1,0 +1,17 @@
+# Audit des dépendances (pnpm audit) : échoue à partir du niveau `audit.level` de
+# pnpm-workspace.yaml. Conduite à tenir sur alerte :
+# https://gist.github.com/pom421/8c5cfd6fc4049f068d12318995c900b2
+name: audit
+
+on:
+  pull_request:
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - run: pnpm audit

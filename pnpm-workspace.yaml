@@ -7,8 +7,18 @@ pmOnFail: error
 engineStrict: true
 
 # Cooldown anti supply-chain : refuse toute version publiée il y a moins de
-# 7 jours (10080 min), le temps que l'écosystème repère un paquet compromis.
-minimumReleaseAge: 10080
+# 3 jours (4320 min), le temps que l'écosystème repère un paquet compromis. Les correctifs
+# de sécurité passent par `pnpm audit --fix` (exception ajoutée automatiquement, version
+# précise), jamais par une exclusion au nom du paquet seul. Conduite à tenir :
+# https://gist.github.com/pom421/8c5cfd6fc4049f068d12318995c900b2
+minimumReleaseAge: 4320
+
+# Supprime les exceptions de cooldown devenues inutiles (version assez ancienne).
+minimumReleaseAgeExcludePrune: true
+
+# `pnpm audit` échoue (code 1) à partir de ce niveau de gravité (voir la CI).
+audit:
+  level: high
 
 # Scripts d'installation (preinstall/postinstall…) des dépendances : aucun
 # autorisé. Playwright n'en a pas besoin : le navigateur s'installe à part avec

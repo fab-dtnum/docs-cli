@@ -298,6 +298,12 @@ export async function getFormattedMarkdown(id: string): Promise<string> {
   return r.content ?? '';
 }
 
+/** HTML du document (fragment, sans `<html>`) : le serveur y supprime les blocs qu'il ne connaît pas (Mermaid, formules). */
+export async function getFormattedHtml(id: string): Promise<string> {
+  const r = await request<{ content: string | null }>(`documents/${id}/formatted-content/?content_format=html`);
+  return r.content ?? '';
+}
+
 /** Contenu d'une pièce jointe (`/media/…`). */
 export async function getMedia(path: string): Promise<Buffer> {
   const res = await send(mediaUrl(path), path, { accept: '*/*', timeoutMs: MEDIA_TIMEOUT_MS });
